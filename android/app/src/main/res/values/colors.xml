@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind Flutter's first frame. The same value as
+         AppColors.light.background (lib/core/theme/app_colors.dart), so the
+         hand-over to the Flutter splash does not flash. Change both together. -->
+    <color name="launch_background">#F7F9FC</color>
+
+    <!-- The adaptive launcher icon's tile: AppColors.light.primary (Deep Navy).
+         Not redefined for night — a launcher icon does not change with the
+         system theme. -->
+    <color name="ic_launcher_background">#142B4A</color>
+</resources>

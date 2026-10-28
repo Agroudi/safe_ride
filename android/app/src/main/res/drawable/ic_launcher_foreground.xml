@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The adaptive launcher icon's glyph: the shield-and-road mark from
+     assets/images/logo_mark.svg, path for path, so the home screen, the
+     Android 12+ system splash and the Flutter splash show the same mark.
+     Redraw both together.
+
+     The SVG's 48x48 box is scaled 1.2x and centred in the 108x108 canvas
+     (54 - 24 x 1.2 = 25.2): the shield's farthest corner sits ~27dp from the
+     centre, inside the 33dp radius every launcher mask keeps. The road is
+     negative space, hence evenOdd. White on @color/ic_launcher_background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="1.2"
+        android:scaleY="1.2"
+        android:translateX="25.2"
+        android:translateY="25.2">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M24 3 L40.5 9.2 C41.4 9.5 42 10.4 42 11.4 V22.6 C42 33.2 34.6 41.9 24.7 44.8 C24.2 44.95 23.8 44.95 23.3 44.8 C13.4 41.9 6 33.2 6 22.6 V11.4 C6 10.4 6.6 9.5 7.5 9.2 Z M18.5 37 L22.4 14 H25.6 L29.5 37 Z" />
+        <!-- The centre-line dashes, shortening towards the horizon. -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M23 31 h2 v4 h-2 Z M23.2 24.5 h1.6 v3.5 h-1.6 Z M23.4 18.5 h1.2 v3 h-1.2 Z" />
+    </group>
+</vector>

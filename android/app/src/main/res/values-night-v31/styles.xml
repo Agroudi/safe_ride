@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark-mode twin of values-v31/styles.xml. Without this file a phone
+         in dark mode would pick values-night/ (the night qualifier outranks the
+         API level) and the Android 12+ splash would lose its colour. Same
+         parent as values-night/styles.xml; keep them in step. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_background</item>
+        <!-- Always the full launcher icon on its 160dp disc. Without it the
+             system draws the foreground alone, enlarged, when the icon's
+             tile is "similar" to the field (the dark field is), so the
+             splash would start from two different images. The Flutter
+             splash's frame 0 repeats this one (AppMotion.launchDisc /
+             launchGlyph). -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+    </style>
+</resources>

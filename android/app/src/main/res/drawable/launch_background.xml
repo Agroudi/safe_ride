@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch window before Flutter draws: a field in the Flutter splash's
+     own background colour (values/colors.xml, values-night/colors.xml) with
+     the launcher icon as the Android 12+ system splash draws it - a 160dp
+     disc, the mark's box 128dp (the 108-unit foreground at 240dp) - so the
+     Flutter splash's frame 0 (AppMotion.launchDisc / launchGlyph) takes over
+     from an identical image. Seen on Android 11 and older; on 12+ the system
+     splash covers the window until Flutter's first frame.
+     drawable-v21/ holds an identical copy; keep the two the same. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+    <item android:gravity="center" android:width="160dp" android:height="160dp">
+        <shape android:shape="oval">
+            <solid android:color="@color/ic_launcher_background" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="240dp" android:height="240dp"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

@@ -1,0 +1,487 @@
+{
+  "app": {
+    "name": "SafeRide",
+    "exitConfirm": "Press back again to leave the app",
+    "logoLabel": "SafeRide logo"
+  },
+  "splash": {
+    "title": "SafeRide",
+    "tagline": "Travel with confidence",
+    "failedTitle": "We couldn't get things ready",
+    "failedBody": "Something stopped the app from starting. Please try again.",
+    "retry": "Try again",
+    "loading": "Getting the app ready"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Get started",
+    "steps": {
+      "one": {
+        "eyebrow": "SAFETY FIRST",
+        "title": "Every Journey, Safer",
+        "body": "SafeRide is designed around one goal: helping you feel safe and confident on every trip."
+      },
+      "two": {
+        "eyebrow": "COMING SOON",
+        "title": "Stay Connected",
+        "body": "Sharing your journey with the people you trust is coming soon. It isn't available in this version yet."
+      },
+      "three": {
+        "eyebrow": "ONE PLACE",
+        "title": "Peace of Mind, Every Ride",
+        "body": "Trusted contacts, ride-safety advice and emergency numbers, together in the Safety tab and kept on this phone."
+      }
+    },
+    "progress": "Step {current} of {total}"
+  },
+  "welcome": {
+    "title": "Welcome to SafeRide",
+    "subtitle": "Create an account or log in to get started.",
+    "createAccount": "Create account",
+    "login": "Log in",
+    "preferences": "Preferences"
+  },
+  "preferences": {
+    "title": "Preferences",
+    "language": "Language",
+    "theme": "Appearance",
+    "languages": {
+      "ar": "العربية",
+      "en": "English"
+    },
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System default"
+    },
+    "systemHint": "Follows your device setting",
+    "done": "Done"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to carry on where you left off.",
+      "passwordLabel": "Password",
+      "passwordHint": "••••••••",
+      "submit": "Log in",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "emailLabel": "Email",
+      "emailHint": "name@example.com"
+    },
+    "register": {
+      "title": "Create account",
+      "fullNameLabel": "Full name",
+      "fullNameHint": "First and last name",
+      "phoneLabel": "Mobile number (optional)",
+      "phoneHint": "05xxxxxxxx",
+      "passwordLabel": "Password",
+      "passwordHint": "••••••••",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordHint": "••••••••",
+      "submit": "Create the account",
+      "emailLabel": "Email",
+      "emailHint": "name@example.com",
+      "phoneNote": "Optional. SafeRide doesn't verify this number.",
+      "passwordPolicy": "At least 8 characters, including a number and a capital letter.",
+      "deviceOnly": "In this version your account is saved on this phone only.",
+      "haveAccount": "Already have an account?",
+      "login": "Log in"
+    },
+    "errors": {
+      "emailTaken": "An account with this email already exists on this phone.",
+      "wrongPassword": "The password is incorrect.",
+      "noAccount": {
+        "title": "Something went wrong",
+        "message": "No account exists with this email address. Check your details or create a new account.",
+        "action": "Create account"
+      },
+      "storage": {
+        "title": "Something went wrong",
+        "message": "SafeRide couldn't read or save your details on this phone. Please try again."
+      },
+      "unknown": {
+        "title": "Something went wrong",
+        "message": "Please try again."
+      }
+    },
+    "notices": {
+      "registered": {
+        "title": "Account created",
+        "message": "It's saved on this phone only. SafeRide doesn't have online accounts yet."
+      },
+      "signedOut": {
+        "title": "You've signed out",
+        "message": "Your language and appearance settings are kept."
+      },
+      "resetUnavailable": {
+        "title": "Password reset isn't available yet",
+        "message": "Accounts in this version live on this phone only, so SafeRide can't send a reset email. If you can't remember your password, create a new account with another email."
+      }
+    }
+  },
+  "home": {
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}"
+    },
+    "greetingPlain": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "subtitle": "Where are you heading today?",
+    "avatarLabel": "Open your profile",
+    "plan": {
+      "title": "Plan a Safe Journey",
+      "body": "Write down where you are going, check the details, and keep a record of your trips.",
+      "action": "Start a Journey"
+    },
+    "safety": {
+      "title": "Safety features",
+      "planned": "Planned",
+      "sharing": {
+        "title": "Journey Sharing",
+        "body": "Share a journey with people you trust. This needs SafeRide's online service, which isn't available yet."
+      },
+      "contacts": {
+        "title": "Trusted Contacts",
+        "body": "Keep the people you trust in one place, on this phone."
+      },
+      "resources": {
+        "title": "Safety Resources",
+        "body": "Ride-safety advice and emergency numbers, available offline."
+      }
+    },
+    "recent": {
+      "title": "Recent journeys",
+      "seeAll": "See all",
+      "emptyTitle": "No journeys yet",
+      "emptyBody": "Journeys you plan will appear here."
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "minLength": {
+      "one": "Must be at least {count} character",
+      "other": "Must be at least {count} characters"
+    },
+    "maxLength": {
+      "one": "Must be at most {count} character",
+      "other": "Must be at most {count} characters"
+    },
+    "email": "Enter a valid email address",
+    "fullName": "Enter your full name",
+    "phone": "Enter a valid mobile number",
+    "passwordDigit": "Must contain at least one digit",
+    "passwordUppercase": "Must contain at least one uppercase letter",
+    "passwordMismatch": "The confirmation does not match the password",
+    "place": "Enter at least 2 characters",
+    "samePlace": "The destination must differ from the starting point",
+    "departurePast": "Choose a time that has not passed",
+    "relationship": "At most 40 characters"
+  },
+  "notifications": {
+    "dismiss": "Dismiss",
+    "kinds": {
+      "success": "Success",
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information",
+      "offline": "Offline"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "account": "Account",
+    "deviceOnly": "Saved on this phone only",
+    "phoneUnverified": "Not verified",
+    "signOut": "Sign out",
+    "confirm": {
+      "title": "Sign out?",
+      "message": "You'll need your email and password to sign in again. Your language and appearance stay as they are.",
+      "confirm": "Sign out",
+      "cancel": "Cancel"
+    },
+    "edit": "Edit profile",
+    "more": "More",
+    "settings": {
+      "title": "Language & appearance",
+      "body": "Arabic or English; light, dark or your device setting."
+    },
+    "about": {
+      "title": "About SafeRide",
+      "body": "What the app is, and what it keeps on this phone."
+    },
+    "editPage": {
+      "title": "Edit profile",
+      "emailLabel": "Email",
+      "emailNote": "Your email can't be changed: it identifies your account on this phone.",
+      "save": "Save changes"
+    },
+    "notices": {
+      "updated": "Profile updated"
+    }
+  },
+  "tabs": {
+    "home": "Home",
+    "journeys": "My Journeys",
+    "profile": "Profile",
+    "safety": "Safety"
+  },
+  "journeys": {
+    "title": "My Journeys",
+    "empty": {
+      "title": "No journeys yet",
+      "body": "Plan your first journey and it will be kept here, on this phone.",
+      "action": "Start a Journey"
+    },
+    "failed": {
+      "title": "Your journeys couldn't be loaded",
+      "body": "SafeRide couldn't read them from this phone.",
+      "retry": "Try again"
+    },
+    "status": {
+      "planned": "Planned",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "from": "From",
+    "to": "To",
+    "route": "{from} to {to}",
+    "notTracked": "SafeRide doesn't track journeys or use your location. You update a journey's status yourself.",
+    "plan": {
+      "title": "Plan a journey",
+      "fromLabel": "Starting point",
+      "fromHint": "Home, work, an address…",
+      "toLabel": "Destination",
+      "toHint": "Where are you going?",
+      "recent": "Recent places",
+      "review": "Review journey",
+      "departureLabel": "Departure",
+      "departureHint": "Choose a date and time"
+    },
+    "review": {
+      "title": "Review your journey",
+      "confirm": "Confirm journey",
+      "discard": "Cancel"
+    },
+    "detail": {
+      "title": "Journey",
+      "created": "Planned on",
+      "updated": "Updated",
+      "complete": "Mark as completed",
+      "cancel": "Cancel journey",
+      "settled": "This journey is closed. Its status can no longer change.",
+      "missingTitle": "Journey not found",
+      "missingBody": "It isn't on this phone any more.",
+      "edit": "Edit journey"
+    },
+    "confirmComplete": {
+      "title": "Mark as completed?",
+      "message": "Use this once you have arrived. The journey will be closed.",
+      "confirm": "Mark as completed",
+      "cancel": "Not yet"
+    },
+    "confirmCancel": {
+      "title": "Cancel this journey?",
+      "message": "The journey will be kept in your history as cancelled.",
+      "confirm": "Cancel journey",
+      "cancel": "Keep it"
+    },
+    "notices": {
+      "planned": {
+        "title": "Journey planned",
+        "message": "It's saved on this phone. Nothing is shared or tracked."
+      },
+      "completed": "Journey marked as completed",
+      "cancelled": "Journey cancelled",
+      "updated": "Journey updated"
+    },
+    "errors": {
+      "title": "Something went wrong",
+      "storage": "SafeRide couldn't save this on the phone. Please try again.",
+      "signedOut": "You are no longer signed in. Sign in again to continue.",
+      "notPlanned": "This journey is already closed."
+    },
+    "departure": "Departure",
+    "departureNotSet": "Departure not set",
+    "filter": {
+      "label": "Show journeys",
+      "all": "All",
+      "planned": "Planned",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "empty": {
+        "planned": "No planned journeys.",
+        "completed": "No completed journeys yet.",
+        "cancelled": "No cancelled journeys."
+      }
+    },
+    "more": "More actions",
+    "edit": {
+      "title": "Edit journey",
+      "save": "Save changes"
+    }
+  },
+  "safety": {
+    "title": "Safety Center",
+    "subtitle": "Your safety tools, in one place.",
+    "note": "SafeRide doesn't call for help, track you or contact anyone on its own.",
+    "entries": {
+      "contacts": {
+        "title": "Trusted Contacts",
+        "body": "The people you would reach out to."
+      },
+      "guide": {
+        "title": "Safety Guide",
+        "body": "Advice for before, during and after a ride."
+      },
+      "journeys": {
+        "title": "Journey Safety",
+        "body": "What SafeRide does with your journeys, and what it does not."
+      },
+      "emergency": {
+        "title": "Emergency Information",
+        "body": "Official emergency numbers in Saudi Arabia."
+      }
+    },
+    "contacts": {
+      "title": "Trusted Contacts",
+      "add": "Add a contact",
+      "notice": "Contacts are saved on this phone only. SafeRide doesn't verify their numbers or send them anything.",
+      "empty": {
+        "title": "No trusted contacts yet",
+        "body": "Add the people you would call if something went wrong."
+      },
+      "failed": {
+        "title": "Your contacts couldn't be loaded",
+        "body": "SafeRide couldn't read them from this phone.",
+        "retry": "Try again"
+      },
+      "form": {
+        "addTitle": "Add a contact",
+        "editTitle": "Edit contact",
+        "nameLabel": "Full name",
+        "nameHint": "First and last name",
+        "phoneLabel": "Phone number",
+        "phoneHint": "05xxxxxxxx",
+        "relationshipLabel": "Relationship (optional)",
+        "relationshipHint": "Sister, friend, colleague…",
+        "save": "Save contact",
+        "delete": "Delete contact"
+      },
+      "confirmDelete": {
+        "title": "Delete this contact?",
+        "message": "{name} will be removed from this phone.",
+        "confirm": "Delete",
+        "cancel": "Keep"
+      },
+      "notices": {
+        "added": "Contact added",
+        "updated": "Contact updated",
+        "deleted": "Contact deleted"
+      },
+      "errors": {
+        "title": "Something went wrong",
+        "duplicatePhone": "This number is already in your contacts.",
+        "full": "You can keep up to 20 trusted contacts.",
+        "storage": "SafeRide couldn't save this on the phone. Please try again.",
+        "signedOut": "You are no longer signed in. Sign in again to continue.",
+        "notFound": "This contact isn't on this phone any more."
+      }
+    },
+    "guide": {
+      "title": "Safety Guide",
+      "intro": "General advice for getting around safely. It is saved in the app, so it is here even without a connection.",
+      "sections": {
+        "before": {
+          "title": "Before you ride",
+          "tip1": "Check that the car, its plate and the driver match what you booked before you get in.",
+          "tip2": "Tell someone you trust where you are going and when you expect to arrive.",
+          "tip3": "Wait for your ride somewhere public and well lit.",
+          "tip4": "Make sure your phone is charged."
+        },
+        "during": {
+          "title": "During the ride",
+          "tip1": "Sit in the back and wear your seat belt.",
+          "tip2": "Follow the route on your own map app if you can.",
+          "tip3": "Keep personal details, like your home address, to yourself.",
+          "tip4": "If something feels wrong, ask to stop somewhere busy and get out."
+        },
+        "after": {
+          "title": "When you arrive",
+          "tip1": "Let the person you told know that you have arrived.",
+          "tip2": "Check you have your belongings before the car leaves.",
+          "tip3": "Report anything that worried you to the ride service."
+        },
+        "emergency": {
+          "title": "In an emergency",
+          "tip1": "Call the emergency number for where you are.",
+          "tip2": "Give your location: a street, a landmark or a shop nearby.",
+          "tip3": "Stay on the line and follow the instructions you are given."
+        }
+      }
+    },
+    "journeys": {
+      "title": "Journey Safety",
+      "intro": "Planning ahead gives you a clear record of where you are going and when. Telling the people you trust is up to you.",
+      "can": {
+        "title": "What SafeRide does today",
+        "plan": "Lets you plan a journey: where from, where to and when.",
+        "review": "Shows you the details to check before you save them.",
+        "status": "Keeps your journeys on this phone, and you mark each one completed or cancelled yourself."
+      },
+      "cannot": {
+        "title": "Not available yet",
+        "tracking": "Live location or tracking during a journey.",
+        "sharing": "Sharing a journey with your trusted contacts.",
+        "alerts": "Automatic alerts or calls for help."
+      },
+      "plan": "Plan a journey",
+      "history": "My Journeys"
+    },
+    "emergency": {
+      "title": "Emergency Information",
+      "country": "Saudi Arabia",
+      "unifiedNote": "911 is the unified emergency number in Riyadh, Makkah, Madinah and the Eastern Province. Elsewhere in the Kingdom, use the numbers below.",
+      "services": {
+        "unified": "Unified emergency number",
+        "police": "Police",
+        "ambulance": "Ambulance",
+        "civilDefense": "Civil Defense",
+        "traffic": "Traffic police",
+        "roads": "Roads security"
+      },
+      "call": "Call",
+      "callNote": "Call opens your phone app with the number ready. You place the call yourself.",
+      "outside": "Outside Saudi Arabia these numbers may not work. Call the local emergency number where you are.",
+      "sources": "Sources: the Ministry of Interior (911 Unified Security Operations Centers), the Saudi Press Agency, and stc's emergency numbers. Last checked {date}.",
+      "callFailed": {
+        "title": "Your phone app didn't open",
+        "message": "Dial {number} yourself."
+      }
+    }
+  },
+  "about": {
+    "title": "About SafeRide",
+    "intro": "SafeRide helps you plan safer journeys and keep your safety tools in one place. This is an early version that works entirely on this phone.",
+    "stored": {
+      "title": "Kept on this phone",
+      "account": "Your name, email and optional phone number. Your password is stored only as a salted hash, never as you typed it.",
+      "journeys": "The journeys you plan, and the status you give them.",
+      "contacts": "Your trusted contacts.",
+      "preferences": "Your language and appearance."
+    },
+    "notYet": {
+      "title": "Not part of this version",
+      "online": "Online accounts, syncing between devices, or password reset.",
+      "tracking": "Live location, journey tracking or sharing.",
+      "alerts": "Contacting anyone or calling for help on your behalf."
+    },
+    "deviceNote": "Removing the app or clearing its data deletes everything above. Nothing is kept anywhere else."
+  }
+}
