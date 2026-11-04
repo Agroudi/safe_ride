@@ -5,16 +5,21 @@ import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
 import 'package:safe_ride/features/journeys/logic/states/journeys_state.dart';
 
 /// Loads the signed-in account's journeys and first name, and reloads after
 /// every change the repository reports — so home's "recent journeys" is
 /// current the moment a plan is confirmed. One per screen.
+///
+/// Signed-in screens start here, so it also lets [tracker] resume a route
+/// recording the app was closed in the middle of.
 class JourneysCubit extends Cubit<JourneysState> {
-  JourneysCubit(this._repository, this._session)
+  JourneysCubit(this._repository, this._session, {JourneyTracker? tracker})
     : super(const JourneysLoading()) {
     _subscription = _repository.changes.listen((_) => load());
     _sessionChanges = _session.changes.listen((_) => load());
+    if (tracker != null) unawaited(tracker.recover());
   }
 
   final JourneyRepository _repository;

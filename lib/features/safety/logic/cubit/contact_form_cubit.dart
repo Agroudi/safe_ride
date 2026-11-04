@@ -11,6 +11,10 @@ class ContactFormCubit extends Cubit<ContactFormState> {
 
   final TrustedContactsRepository _repository;
 
+  /// The contact this screen edits, from [load]; null when adding. Save and
+  /// delete decide from it, so an edit never turns into an add.
+  String? _id;
+
   TrustedContactModel? get _contact => switch (state) {
     ContactFormReady(:final TrustedContactModel? contact) => contact,
     ContactFormBusy(:final TrustedContactModel? contact) => contact,
@@ -20,6 +24,7 @@ class ContactFormCubit extends Cubit<ContactFormState> {
 
   /// Editing: reads the contact. Adding needs no call.
   Future<void> load(String id) async {
+    _id = id;
     emit(const ContactFormLoading());
     try {
       final TrustedContactModel? contact = await _repository.contact(id);
@@ -29,39 +34,52 @@ class ContactFormCubit extends Cubit<ContactFormState> {
             ? const ContactFormMissing()
             : ContactFormReady(contact: contact),
       );
-    } on ContactFailure catch (e) {
-      if (!isClosed) emit(ContactFormFailed(e.code));
+    } on ContactFailure {
+      if (!isClosed) emit(const ContactFormUnreadable());
     }
+  }
+
+  /// Reads the edited contact again after [ContactFormUnreadable].
+  Future<void> retry() async {
+    final String? id = _id;
+    if (id != null) await load(id);
   }
 
   Future<void> save({
     required String fullName,
     required String phone,
     String? relationship,
-  }) => _run(() async {
+  }) {
     final TrustedContactModel? editing = _contact;
-    if (editing == null) {
-      await _repository.add(
-        fullName: fullName,
-        phone: phone,
-        relationship: relationship,
-      );
-    } else {
-      await _repository.update(
-        editing.id,
-        fullName: fullName,
-        phone: phone,
-        relationship: relationship,
-      );
-    }
-    return const ContactFormSaved();
-  });
+    // An edit whose contact was never read has nothing to update.
+    if (_id != null && editing == null) return Future<void>.value();
+    return _run(() async {
+      if (editing == null) {
+        await _repository.add(
+          fullName: fullName,
+          phone: phone,
+          relationship: relationship,
+        );
+      } else {
+        await _repository.update(
+          editing.id,
+          fullName: fullName,
+          phone: phone,
+          relationship: relationship,
+        );
+      }
+      return const ContactFormSaved();
+    });
+  }
 
-  Future<void> delete() => _run(() async {
+  Future<void> delete() {
     final TrustedContactModel? editing = _contact;
-    if (editing != null) await _repository.delete(editing.id);
-    return const ContactFormDeleted();
-  });
+    if (editing == null) return Future<void>.value();
+    return _run(() async {
+      await _repository.delete(editing.id);
+      return const ContactFormDeleted();
+    });
+  }
 
   Future<void> _run(Future<ContactFormState> Function() body) async {
     if (state is ContactFormBusy || state is ContactFormLoading) return;

@@ -13,7 +13,11 @@ import 'package:safe_ride/core/shared_widgets/preferences_section.dart';
 /// [PreferencesCubit] the theme. One widget for the preferences sheet and the
 /// settings screen, so the two can never offer different choices.
 class PreferencesChoices extends StatelessWidget {
-  const PreferencesChoices({super.key});
+  const PreferencesChoices({super.key, this.onLanguageChanged});
+
+  /// After a new language is applied — signed in, it is also kept with the
+  /// account (the settings screen); the welcome sheet passes nothing.
+  final ValueChanged<String>? onLanguageChanged;
 
   /// Arabic first, as the app is designed. Each is named in its own script, so
   /// it can be found from a language the reader does not know.
@@ -48,7 +52,10 @@ class PreferencesChoices extends StatelessWidget {
                   'preferences.languages.${locale.languageCode}',
                 ),
                 selected: locale.languageCode == language,
-                onTap: () => context.setLocale(locale),
+                onTap: () async {
+                  await context.setLocale(locale);
+                  onLanguageChanged?.call(locale.languageCode);
+                },
               ),
           ],
         ),

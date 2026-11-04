@@ -9,15 +9,20 @@ import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/core/shared_widgets/link_tile.dart';
 
-/// The Safety tab: four ways in, each to a working screen — Trusted
-/// Contacts, the Safety Guide, Journey Safety and Emergency Information —
-/// and a plain line about what SafeRide does not do on its own.
+/// The Safety tab: ways in, each to a working screen — Trusted Contacts, the
+/// Safety Guide, Journey Safety, Emergency Information, and in a build with
+/// contact alerts the alerts received and accepting an invite — and a plain
+/// line about what SafeRide does not do.
 class SafetyCenterPage extends StatelessWidget {
   const SafetyCenterPage({super.key});
 
   static const List<(String, IconData, String)> _entries =
       <(String, IconData, String)>[
         ('contacts', Icons.group_rounded, AppRoutes.trustedContacts),
+        if (AppFeatures.contactAlerts) ...<(String, IconData, String)>[
+          ('alerts', Icons.notifications_rounded, AppRoutes.safetyAlerts),
+          ('invite', Icons.person_add_alt_1_rounded, AppRoutes.acceptInvite),
+        ],
         ('guide', Icons.menu_book_rounded, AppRoutes.safetyGuide),
         ('journeys', Icons.route_rounded, AppRoutes.journeySafety),
         ('emergency', Icons.emergency_rounded, AppRoutes.emergencyInfo),

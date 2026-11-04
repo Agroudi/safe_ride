@@ -16,12 +16,15 @@ import 'package:safe_ride/core/shared_widgets/preferences_section.dart';
 import 'package:safe_ride/features/authentication/data/models/user_model.dart';
 import 'package:safe_ride/features/authentication/logic/cubit/account_cubit.dart';
 import 'package:safe_ride/features/authentication/logic/states/account_state.dart';
+import 'package:safe_ride/features/authentication/presentation/widgets/country_tile.dart';
 import 'package:safe_ride/features/authentication/presentation/widgets/auth_notices.dart';
+import 'package:safe_ride/features/authentication/presentation/widgets/push_permission_tile.dart';
 import 'package:safe_ride/features/authentication/presentation/widgets/settings_account_card.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 
 /// The Profile tab: who you are, editing it, links to language & appearance
-/// and About, and signing out. Home's avatar opens it too.
+/// and About, signing out and deleting the account. Home's avatar opens it
+/// too.
 ///
 /// Sign-out asks first, then ends the session **only** — the onboarding flag,
 /// language and theme stay — and `go`es to welcome, so back cannot return to
@@ -96,9 +99,16 @@ class _ProfileView extends StatelessWidget {
                     name: user?.fullName,
                     email: user?.email,
                     phone: user?.phone,
-                    deviceOnlyLabel: context.tr('profile.deviceOnly'),
+                    accountNote: context.tr('profile.accountNote'),
                     unverifiedLabel: context.tr('profile.phoneUnverified'),
                   ),
+                  if (state is AccountFailed && user == null) ...<Widget>[
+                    Gap(12.fx),
+                    AppPrimaryButton(
+                      label: context.tr('safety.contacts.failed.retry'),
+                      onPressed: context.read<AccountCubit>().load,
+                    ),
+                  ],
                   Gap(12.fx),
                   AppPrimaryButton(
                     label: context.tr('profile.edit'),
@@ -117,6 +127,10 @@ class _ProfileView extends StatelessWidget {
                     onTap: () => context.pushNamed(AppRoutes.settings),
                   ),
                   Gap(10.fx),
+                  const CountryTile(),
+                  Gap(10.fx),
+                  const PushPermissionTile(),
+                  Gap(10.fx),
                   LinkTile(
                     icon: Icons.info_outline_rounded,
                     title: context.tr('profile.about.title'),
@@ -132,6 +146,15 @@ class _ProfileView extends StatelessWidget {
                     onPressed: state is AccountLoading
                         ? null
                         : () => _confirmSignOut(context),
+                  ),
+                  Gap(12.fx),
+                  AppPrimaryButton(
+                    label: context.tr('profile.delete.title'),
+                    outlined: true,
+                    color: context.appColors.error,
+                    onPressed: user == null
+                        ? null
+                        : () => context.pushNamed(AppRoutes.deleteAccount),
                   ),
                 ],
               ),

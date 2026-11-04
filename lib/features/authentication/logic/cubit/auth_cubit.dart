@@ -18,12 +18,14 @@ class AuthCubit extends Cubit<AuthState> {
     required String fullName,
     required String email,
     required String password,
+    required String languageCode,
     String? phone,
   }) => _submit(
     () => _repository.register(
       fullName: fullName,
       email: email,
       password: password,
+      languageCode: languageCode,
       phone: phone,
     ),
   );

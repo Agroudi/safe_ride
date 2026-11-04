@@ -18,9 +18,10 @@ import 'package:safe_ride/features/authentication/presentation/widgets/auth_noti
 import 'package:safe_ride/features/authentication/presentation/widgets/login_fields.dart';
 import 'package:safe_ride/features/authentication/presentation/widgets/login_footer.dart';
 
-/// Sign in against the demo accounts on this phone. A wrong password shows
-/// under its field, an unknown email as a notification offering registration;
-/// what was typed stays. While it runs the form is locked and the button
+/// Sign in with Firebase Authentication. Wrong credentials show under the
+/// password — one message for a wrong email or password, so nobody can learn
+/// which emails have accounts; other failures are notifications; what was
+/// typed stays. "Forgot your password?" opens the reset screen. While it runs the form is locked and the button
 /// busy, so it cannot submit twice.
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -48,7 +49,8 @@ class _LoginViewState extends State<_LoginView> {
   /// before anyone has tried are noise.
   AutovalidateMode _mode = AutovalidateMode.disabled;
 
-  /// The repository's verdict on the password, cleared as soon as it changes.
+  /// The server's verdict on the credentials, cleared as soon as the
+  /// password changes.
   String? _passwordError;
 
   @override
@@ -76,20 +78,14 @@ class _LoginViewState extends State<_LoginView> {
       // `go`: signing in replaces the auth stack, so back cannot return here.
       case AuthSucceeded():
         context.goNamed(AppRoutes.home);
-      case AuthFailed(code: AuthFailureCode.wrongPassword):
+      // One message for a wrong email or a wrong password: Firebase does not
+      // say which, so nobody can learn which emails have accounts.
+      case AuthFailed(code: AuthFailureCode.invalidCredentials):
         setState(
-          () => _passwordError = context.tr('auth.errors.wrongPassword'),
+          () => _passwordError = context.tr('auth.errors.invalidCredentials'),
         );
       case AuthFailed(:final AuthFailureCode code):
-        sl<AppNotifier>().show(
-          AuthNotices.failure(
-            context,
-            code,
-            // Replaces login, so back from registration still means welcome.
-            onCreateAccount: () =>
-                context.pushReplacementNamed(AppRoutes.register),
-          ),
-        );
+        sl<AppNotifier>().show(AuthNotices.failure(context, code));
       case AuthInitial() || AuthSubmitting():
         break;
     }
@@ -136,10 +132,12 @@ class _LoginViewState extends State<_LoginView> {
             ),
             Gap(24.fx),
             LoginFooter(
+              // The email typed so far, so the reset screen starts with it.
               onForgotPassword: busy
                   ? null
-                  : () => sl<AppNotifier>().show(
-                      AuthNotices.resetUnavailable(context),
+                  : () => context.pushNamed(
+                      AppRoutes.forgotPassword,
+                      extra: _email.text.trim(),
                     ),
               // Replaces login, so back from registration still means welcome.
               onCreateAccount: busy

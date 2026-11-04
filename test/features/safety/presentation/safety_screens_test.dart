@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
@@ -18,15 +18,33 @@ import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
-import 'package:safe_ride/features/journeys/data/repository/local_journey_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/firestore_journey_repository.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
 import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart';
-import 'package:safe_ride/features/safety/data/repository/local_trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/data/models/contact_failure.dart';
+import 'package:safe_ride/features/safety/data/repository/firestore_trusted_contacts_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/trusted_contacts_repository.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_form_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_invite_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_links_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contacts_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/emergency_cubit.dart';
+import 'package:safe_ride/features/safety/data/repository/emergency_data_source.dart';
+import 'package:safe_ride/features/safety/data/repository/emergency_repository.dart';
+import 'package:safe_ride/features/safety/data/repository/phone_dialer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/country/country_fakes.dart';
+import '../invite_fakes.dart';
+
+/// Never opens anything: no test reaches a real dialer.
+class _Dialer implements PhoneDialer {
+  const _Dialer();
+
+  @override
+  Future<DialOutcome> open(String number) async => DialOutcome.opened;
+}
 
 class _Session implements SessionReader {
   @override
@@ -34,10 +52,25 @@ class _Session implements SessionReader {
 
   @override
   Future<SessionUser?> signedInUser() async =>
-      const SessionUser(id: 'sara@example.com', fullName: 'Sara Ahmed');
+      const SessionUser(id: 'sara-uid', fullName: 'Sara Ahmed');
 }
 
-/// The real router and Safety screens over the local contacts repository.
+/// A contacts store whose reads fail while [broken] is set.
+class _Unreadable extends Fake implements TrustedContactsRepository {
+  bool broken = true;
+
+  @override
+  Stream<void> get changes => const Stream<void>.empty();
+
+  @override
+  Future<TrustedContactModel?> contact(String id) async {
+    if (broken) throw const ContactFailure(ContactFailureCode.storage);
+    return null;
+  }
+}
+
+/// The real router and Safety screens over the Firestore contacts repository
+/// (on `fake_cloud_firestore`).
 void main() {
   EasyLocalization.logger.enableBuildModes = [];
   late TrustedContactsRepository contacts;
@@ -45,15 +78,12 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{'locale': 'en'});
-    FlutterSecureStorage.setMockInitialValues(<String, String>{});
     rootBundle.clear();
     await EasyLocalization.ensureInitialized();
-    contacts = LocalTrustedContactsRepository(
-      const FlutterSecureStorage(),
-      _Session(),
-    );
-    final JourneyRepository journeys = LocalJourneyRepository(
-      const FlutterSecureStorage(),
+    final FakeFirebaseFirestore db = FakeFirebaseFirestore();
+    contacts = FirestoreTrustedContactsRepository(db, _Session());
+    final JourneyRepository journeys = FirestoreJourneyRepository(
+      db,
       _Session(),
     );
     notices = AppNotifier();
@@ -63,10 +93,23 @@ void main() {
       ..registerSingleton<TrustedContactsRepository>(contacts)
       ..registerFactory<ContactsCubit>(() => ContactsCubit(contacts))
       ..registerFactory<ContactFormCubit>(() => ContactFormCubit(contacts))
+      ..registerFactory<ContactLinksCubit>(
+        () => ContactLinksCubit(FakeInvites()),
+      )
+      ..registerFactory<ContactInviteCubit>(
+        () => ContactInviteCubit(FakeInvites()),
+      )
       ..registerFactory<JourneysCubit>(
         () => JourneysCubit(journeys, _Session()),
       )
-      ..registerFactory<PlanJourneyCubit>(() => PlanJourneyCubit(journeys));
+      ..registerFactory<PlanJourneyCubit>(() => PlanJourneyCubit(journeys))
+      ..registerFactory<EmergencyCubit>(
+        () => EmergencyCubit(
+          MemoryCountryRepository('SA'),
+          BundledEmergencyRepository(EmergencyDataSource()),
+          const _Dialer(),
+        ),
+      );
   });
   tearDown(sl.reset);
 
@@ -215,6 +258,32 @@ void main() {
     expect(text('safety.contacts.form.save'), findsNothing);
   });
 
+  // An empty form here would save a second contact; the screen offers a
+  // retry instead, and the retry reads again.
+  testWidgets('a contact that cannot be read offers a retry, not a form', (
+    WidgetTester tester,
+  ) async {
+    final _Unreadable store = _Unreadable();
+    sl
+      ..unregister<ContactFormCubit>()
+      ..registerFactory<ContactFormCubit>(() => ContactFormCubit(store));
+    final GoRouter router = await pumpApp(tester);
+    router.pushNamed(
+      AppRoutes.editContact,
+      pathParameters: <String, String>{'id': 'c1'},
+    );
+    await tester.pumpAndSettle();
+    expect(text('safety.contacts.form.unreadable.title'), findsOneWidget);
+    expect(text('safety.contacts.form.save'), findsNothing);
+    expect(text('safety.contacts.form.delete'), findsNothing);
+    expect(notices.current, isNull);
+
+    store.broken = false;
+    await tester.tap(text('safety.contacts.failed.retry'));
+    await tester.pumpAndSettle();
+    expect(text('safety.contacts.errors.notFound'), findsOneWidget);
+  });
+
   testWidgets('the guide and emergency numbers are there, with sources', (
     WidgetTester tester,
   ) async {
@@ -238,9 +307,30 @@ void main() {
     }
     expect(text('safety.emergency.call'), findsWidgets);
     await tester.scrollUntilVisible(
-      find.textContaining('Ministry of Interior'),
+      find.textContaining('National Numbering Plan'),
       200,
     );
-    expect(find.textContaining('Ministry of Interior'), findsOneWidget);
+    expect(find.textContaining('National Numbering Plan'), findsOneWidget);
+  });
+
+  testWidgets('with no alert backend, nothing offers alerts or invites', (
+    WidgetTester tester,
+  ) async {
+    final GoRouter router = await pumpApp(tester);
+    router.goNamed(AppRoutes.safety);
+    await tester.pumpAndSettle();
+    expect(text('safety.entries.alerts.title'), findsNothing);
+    expect(text('safety.entries.invite.title'), findsNothing);
+    expect(find.textContaining("doesn't alert your contacts"), findsOneWidget);
+
+    await contacts.add(fullName: 'Mona Saleh', phone: '+966551112222');
+    router.pushNamed(AppRoutes.trustedContacts);
+    await tester.pumpAndSettle();
+    expect(find.text('Mona Saleh'), findsOneWidget);
+    expect(text('safety.contacts.alertsOff'), findsNothing);
+    expect(find.textContaining('send them anything'), findsOneWidget);
+    await tester.tap(find.text('Mona Saleh'));
+    await tester.pumpAndSettle();
+    expect(text('safety.invite.create'), findsNothing);
   });
 }

@@ -21,6 +21,7 @@ class PreferenceOption extends StatelessWidget {
     required this.onTap,
     super.key,
     this.icon,
+    this.emoji,
     this.subtitle,
   });
 
@@ -31,6 +32,9 @@ class PreferenceOption extends StatelessWidget {
   /// Drawn in a small tinted badge on the leading edge. Optional: a language
   /// written in its own script needs no picture beside it.
   final IconData? icon;
+
+  /// Drawn in the badge instead of [icon] — a country's flag.
+  final String? emoji;
 
   /// A quieter second line under [label].
   final String? subtitle;
@@ -71,8 +75,8 @@ class PreferenceOption extends StatelessWidget {
               ),
               child: Row(
                 children: <Widget>[
-                  if (icon case final IconData glyph) ...<Widget>[
-                    PreferenceOptionBadge(icon: glyph),
+                  if (icon != null || emoji != null) ...<Widget>[
+                    PreferenceOptionBadge(icon: icon, emoji: emoji),
                     Gap(12.fx),
                   ],
                   Expanded(

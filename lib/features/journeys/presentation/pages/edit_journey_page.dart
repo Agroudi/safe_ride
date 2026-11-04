@@ -68,7 +68,7 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
       setState(() {
         _from.text = state.journey.origin;
         _to.text = state.journey.destination;
-        _departsAt = _stored = state.journey.departsAt?.toLocal();
+        _departsAt = _stored = state.journey.departsAt.toLocal();
       });
     } else if (state is JourneyReady && !state.busy && _saving) {
       _saving = false;
@@ -120,11 +120,11 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
             else if (!editable)
               AppEmptyState(
                 icon: Icons.lock_outline_rounded,
-                title: context.tr(
-                  journey == null
-                      ? 'journeys.detail.missingTitle'
-                      : 'journeys.detail.settled',
-                ),
+                title: context.tr(switch (journey?.status) {
+                  null => 'journeys.detail.missingTitle',
+                  JourneyStatus.active => 'journeys.errors.alreadyStarted',
+                  _ => 'journeys.detail.settled',
+                }),
                 body: context.tr('journeys.notTracked'),
               )
             else ...<Widget>[

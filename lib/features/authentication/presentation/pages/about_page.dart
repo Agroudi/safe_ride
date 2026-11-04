@@ -8,7 +8,7 @@ import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/core/shared_widgets/point_list.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 
-/// What SafeRide is, exactly what it keeps on this phone, and what this
+/// What SafeRide is, where it keeps the user's information, and what this
 /// version does not do. Plain facts about the app — not a legal privacy
 /// policy or terms, which do not exist yet and are not linked.
 class AboutPage extends StatelessWidget {
@@ -44,6 +44,8 @@ class AboutPage extends StatelessWidget {
                 for (final String k in <String>[
                   'account',
                   'journeys',
+                  'route',
+                  'safety',
                   'contacts',
                   'preferences',
                 ])
@@ -56,8 +58,18 @@ class AboutPage extends StatelessWidget {
               icon: Icons.remove_circle_outline_rounded,
               color: context.appColors.textMuted,
               points: <String>[
-                for (final String k in <String>['online', 'tracking', 'alerts'])
+                for (final String k in <String>['sharing', 'alerts'])
                   context.tr('about.notYet.$k'),
+              ],
+            ),
+            Gap(14.fx),
+            PointList(
+              title: context.tr('about.offline.title'),
+              icon: Icons.wifi_off_rounded,
+              color: context.appColors.textMuted,
+              points: <String>[
+                for (final String k in <String>['works', 'saved', 'needs'])
+                  context.tr('about.offline.$k'),
               ],
             ),
             Gap(18.fx),

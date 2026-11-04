@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:safe_ride/core/constants/app_assets.dart';
 import 'package:safe_ride/core/extensions/context_extensions.dart';
@@ -21,14 +23,16 @@ class AppBackButton extends StatelessWidget {
     // is already translated for every locale the app ships, so no key is
     // needed.
     return Semantics(
+      container: true,
       button: true,
       label: MaterialLocalizations.of(context).backButtonTooltip,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed ?? () => Navigator.of(context).maybePop(),
         child: Container(
-          width: 42.fx,
-          height: 42.fx,
+          // Never under the 44 a finger needs, however short the phone.
+          width: math.max(44, 44.fx),
+          height: math.max(44, 44.fx),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: colors.surface,

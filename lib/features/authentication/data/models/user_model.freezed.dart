@@ -11,11 +11,11 @@ part of 'user_model.dart';
 
 // dart format off
 T _$identity<T>(T value) => value;
-
 /// @nodoc
 mixin _$UserModel {
 
- String get fullName;/// Trimmed and lower-cased: the account's key.
+ String get fullName;/// Trimmed and lower-cased; it signs the user in and cannot be changed in
+/// the app.
  String get email; DateTime get createdAt;/// Optional and **never verified** — no copy may say it is.
  String? get phone;
 /// Create a copy of UserModel
@@ -24,8 +24,6 @@ mixin _$UserModel {
 @pragma('vm:prefer-inline')
 $UserModelCopyWith<UserModel> get copyWith => _$UserModelCopyWithImpl<UserModel>(this as UserModel, _$identity);
 
-  /// Serializes this UserModel to a JSON map.
-  Map<String, dynamic> toJson();
 
 
 @override
@@ -33,7 +31,7 @@ bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.phone, phone) || other.phone == phone));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,fullName,email,createdAt,phone);
 
@@ -211,14 +209,15 @@ return $default(_that.fullName,_that.email,_that.createdAt,_that.phone);case _:
 }
 
 /// @nodoc
-@JsonSerializable()
+
 
 class _UserModel implements UserModel {
   const _UserModel({required this.fullName, required this.email, required this.createdAt, this.phone});
-  factory _UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+  
 
 @override final  String fullName;
-/// Trimmed and lower-cased: the account's key.
+/// Trimmed and lower-cased; it signs the user in and cannot be changed in
+/// the app.
 @override final  String email;
 @override final  DateTime createdAt;
 /// Optional and **never verified** — no copy may say it is.
@@ -230,17 +229,14 @@ class _UserModel implements UserModel {
 @pragma('vm:prefer-inline')
 _$UserModelCopyWith<_UserModel> get copyWith => __$UserModelCopyWithImpl<_UserModel>(this, _$identity);
 
-@override
-Map<String, dynamic> toJson() {
-  return _$UserModelToJson(this, );
-}
+
 
 @override
 bool operator ==(Object other) {
   return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.phone, phone) || other.phone == phone));
 }
 
-@JsonKey(includeFromJson: false, includeToJson: false)
+
 @override
 int get hashCode => Object.hash(runtimeType,fullName,email,createdAt,phone);
 

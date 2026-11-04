@@ -10,6 +10,7 @@ import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/shared_widgets/app_primary_button.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
+import 'package:safe_ride/core/validation/validators.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/states/plan_journey_state.dart';
@@ -37,6 +38,18 @@ class _ReviewJourneyView extends StatelessWidget {
   const _ReviewJourneyView({required this.draft});
 
   final JourneyDraft draft;
+
+  /// The departure was checked on the plan screen, but time has moved since:
+  /// a journey is never saved with a departure that has already passed.
+  void _confirm(BuildContext context) {
+    if (Validators.of(context).departure()(draft.departsAt) != null) {
+      sl<AppNotifier>().show(JourneyNotices.departurePassed(context));
+      // Back to the plan, which still holds the places.
+      context.canPop() ? context.pop() : context.goNamed(AppRoutes.planJourney);
+      return;
+    }
+    context.read<PlanJourneyCubit>().confirm(draft);
+  }
 
   void _onState(BuildContext context, PlanJourneyState state) {
     switch (state) {
@@ -90,8 +103,7 @@ class _ReviewJourneyView extends StatelessWidget {
                   AppPrimaryButton(
                     label: context.tr('journeys.review.confirm'),
                     busy: busy,
-                    onPressed: () =>
-                        context.read<PlanJourneyCubit>().confirm(draft),
+                    onPressed: () => _confirm(context),
                   ),
                   Gap(12.fx),
                   AppPrimaryButton(

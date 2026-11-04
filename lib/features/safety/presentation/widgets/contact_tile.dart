@@ -4,13 +4,15 @@ import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 
-/// One trusted contact: initial, name, number and — when given — how the
-/// user knows them. Tapping opens it to edit or delete; read as one item.
+/// One trusted contact: initial, name, number, — when given — how the user
+/// knows them, and any word on alerts. Tapping opens it to edit
+/// or delete; read as one item.
 class ContactTile extends StatelessWidget {
   const ContactTile({
     required this.name,
     required this.phone,
     required this.onTap,
+    this.alerts,
     this.relationship,
     super.key,
   });
@@ -19,6 +21,9 @@ class ContactTile extends StatelessWidget {
   final String phone;
   final String? relationship;
   final VoidCallback onTap;
+
+  /// Whether alerts can reach them, in words; null in a build without them.
+  final String? alerts;
 
   /// [value] in a left-to-right isolate: a `+` and digits keep their order
   /// inside Arabic (CLAUDE.md §8).
@@ -82,6 +87,13 @@ class ContactTile extends StatelessWidget {
                           relation,
                           style: context.texts.labelSmall?.copyWith(
                             color: colors.textMuted,
+                          ),
+                        ),
+                      if (alerts case final String words)
+                        Text(
+                          words,
+                          style: context.texts.labelSmall?.copyWith(
+                            color: colors.accentText,
                           ),
                         ),
                     ],

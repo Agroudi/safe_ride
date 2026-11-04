@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
+import 'package:safe_ride/core/country/country_cubit.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/notifications/notification_host.dart';
+import 'package:safe_ride/core/push/push_notifications.dart';
+import 'package:safe_ride/core/push/push_permission_cubit.dart';
 import 'package:safe_ride/core/preferences/app_preferences.dart';
 import 'package:safe_ride/core/preferences/preferences_cubit.dart';
 import 'package:safe_ride/core/router/app_router.dart';
@@ -20,13 +23,20 @@ import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/authentication/data/models/user_model.dart';
 import 'package:safe_ride/features/authentication/data/repository/auth_repository.dart';
 import 'package:safe_ride/features/authentication/logic/cubit/account_cubit.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_checklist.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
-import 'package:safe_ride/features/journeys/data/repository/local_journey_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/firestore_journey_repository.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_tile_body.dart';
+import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/incident_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/tracking_cubit.dart';
+import '../../../core/country/country_fakes.dart';
+import '../tracking_fakes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Session implements SessionReader {
@@ -35,7 +45,17 @@ class _Session implements SessionReader {
 
   @override
   Future<SessionUser?> signedInUser() async =>
-      const SessionUser(id: 'sara@example.com', fullName: 'Sara Ahmed');
+      const SessionUser(id: 'sara-uid', fullName: 'Sara Ahmed');
+}
+
+class _Device implements DeviceRegistration {
+  @override
+  Future<void> unregister() async {}
+}
+
+class _Push extends Fake implements PushNotifications {
+  @override
+  Future<PushPermission> permission() async => PushPermission.notAsked;
 }
 
 class _Auth extends Fake implements AuthRepository {
@@ -50,8 +70,8 @@ class _Auth extends Fake implements AuthRepository {
   );
 }
 
-/// The real router, tab shell, pages and local journey repository (over the
-/// secure-storage mock), signed in as Sara.
+/// The real router, tab shell, pages and Firestore journey repository (over
+/// `fake_cloud_firestore`), signed in as Sara.
 void main() {
   EasyLocalization.logger.enableBuildModes = [];
   late JourneyRepository journeys;
@@ -59,12 +79,12 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{'locale': 'en'});
-    FlutterSecureStorage.setMockInitialValues(<String, String>{});
     rootBundle.clear();
     await EasyLocalization.ensureInitialized();
-    journeys = LocalJourneyRepository(const FlutterSecureStorage(), _Session());
+    journeys = FirestoreJourneyRepository(FakeFirebaseFirestore(), _Session());
     notices = AppNotifier();
     await sl.reset();
+    registerSafetyNotes(_Session());
     sl
       ..registerSingleton<AppNotifier>(notices)
       ..registerSingleton<JourneyRepository>(journeys)
@@ -73,7 +93,27 @@ void main() {
       )
       ..registerFactory<PlanJourneyCubit>(() => PlanJourneyCubit(journeys))
       ..registerFactory<JourneyCubit>(() => JourneyCubit(journeys))
-      ..registerFactory<AccountCubit>(() => AccountCubit(_Auth()));
+      ..registerLazySingleton<JourneyTracker>(
+        () => JourneyTracker(
+          location: FakeLocation(),
+          store: MemoryTrackStore(),
+          route: FakeRoute(),
+          journeys: journeys,
+          session: _Session(),
+        ),
+        dispose: (JourneyTracker t) => t.dispose(),
+      )
+      ..registerFactory<TrackingCubit>(
+        () => TrackingCubit(sl<JourneyTracker>()),
+      )
+      ..registerFactory<IncidentCubit>(
+        () => IncidentCubit(MemoryIncidentRepository(), _Session()),
+      )
+      ..registerFactory<AccountCubit>(() => AccountCubit(_Auth(), _Device()))
+      ..registerFactory<PushPermissionCubit>(() => PushPermissionCubit(_Push()))
+      ..registerFactory<CountryCubit>(
+        () => CountryCubit(MemoryCountryRepository()),
+      );
   });
   tearDown(sl.reset);
 
@@ -209,7 +249,33 @@ void main() {
     expect(await journeys.journeys(), isEmpty);
   });
 
-  testWidgets('completing asks first, then closes the journey for good', (
+  // The plan screen checked the time, but review can be left open past it.
+  testWidgets('Confirm after the departure has passed saves nothing', (
+    WidgetTester tester,
+  ) async {
+    final GoRouter router = await pumpApp(tester);
+    await tap(tester, text('home.plan.action'));
+    router.pushNamed(
+      AppRoutes.reviewJourney,
+      extra: JourneyDraft(
+        origin: 'Home',
+        destination: 'Work',
+        departsAt: DateTime.now().subtract(const Duration(minutes: 5)),
+      ).toExtra(),
+    );
+    await tester.pumpAndSettle();
+
+    await tap(tester, text('journeys.review.confirm'));
+    expect(await journeys.journeys(), isEmpty);
+    expect(router.state.name, AppRoutes.planJourney);
+    expect(
+      notices.current?.title,
+      'journeys.notices.departurePassed.title'.tr(),
+    );
+    await outlast(tester);
+  });
+
+  testWidgets('a planned journey starts or is edited, never completed', (
     WidgetTester tester,
   ) async {
     final JourneyModel planned = await journeys.plan(
@@ -223,11 +289,38 @@ void main() {
       pathParameters: <String, String>{'id': planned.id},
     );
     await tester.pumpAndSettle();
+    expect(text('journeys.detail.start'), findsOneWidget);
+    expect(text('journeys.detail.edit'), findsOneWidget);
+    expect(text('journeys.detail.cancel'), findsOneWidget);
+    expect(text('journeys.detail.complete'), findsNothing);
+  });
+
+  testWidgets('completing asks first, then closes the journey for good', (
+    WidgetTester tester,
+  ) async {
+    final JourneyModel planned = await journeys.plan(
+      origin: 'Home',
+      destination: 'Work',
+      departsAt: DateTime.now().add(const Duration(hours: 2)),
+    );
+    await journeys.start(
+      planned.id,
+      checklistVersion: JourneyChecklist.current,
+      confirmed: JourneyChecklist.itemsOf(JourneyChecklist.current).toSet(),
+    );
+    final GoRouter router = await pumpApp(tester);
+    router.pushNamed(
+      AppRoutes.journey,
+      pathParameters: <String, String>{'id': planned.id},
+    );
+    await tester.pumpAndSettle();
+    expect(text('journeys.detail.started'), findsNothing);
+    expect(find.textContaining('journeys.detail.started'.tr()), findsOneWidget);
 
     await tap(tester, text('journeys.detail.complete'));
     expect(text('journeys.confirmComplete.message'), findsOneWidget);
     await tap(tester, text('journeys.confirmComplete.cancel'));
-    expect((await journeys.journey(planned.id))!.status, JourneyStatus.planned);
+    expect((await journeys.journey(planned.id))!.status, JourneyStatus.active);
 
     await tap(tester, text('journeys.detail.complete'));
     await tap(tester, text('journeys.confirmComplete.confirm'));

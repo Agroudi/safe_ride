@@ -9,12 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
+import 'package:safe_ride/core/country/country_cubit.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/notifications/app_notification.dart';
 import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/notifications/notification_host.dart';
 import 'package:safe_ride/core/preferences/app_preferences.dart';
 import 'package:safe_ride/core/preferences/preferences_cubit.dart';
+import 'package:safe_ride/core/push/push_notifications.dart';
+import 'package:safe_ride/core/push/push_permission_cubit.dart';
 import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/authentication/data/models/auth_failure.dart';
@@ -22,6 +25,8 @@ import 'package:safe_ride/features/authentication/data/models/user_model.dart';
 import 'package:safe_ride/features/authentication/data/repository/auth_repository.dart';
 import 'package:safe_ride/features/authentication/logic/cubit/account_cubit.dart';
 import 'package:safe_ride/features/authentication/logic/cubit/auth_cubit.dart';
+import 'package:safe_ride/features/authentication/logic/cubit/password_reset_cubit.dart';
+import 'package:safe_ride/features/authentication/presentation/pages/forgot_password_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/login_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/register_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/about_page.dart';
@@ -29,6 +34,8 @@ import 'package:safe_ride/features/authentication/presentation/pages/edit_profil
 import 'package:safe_ride/features/authentication/presentation/pages/profile_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/country/country_fakes.dart';
 
 final UserModel _sara = UserModel(
   fullName: 'Sara Ahmed',
@@ -68,11 +75,31 @@ class _Repository extends Fake implements AuthRepository {
     required String fullName,
     required String email,
     required String password,
+    required String languageCode,
     String? phone,
   }) => _answer();
 
   @override
   Future<UserModel?> currentUser() async => user;
+
+  /// `email|language` for every reset asked for.
+  final List<String> resets = <String>[];
+
+  @override
+  Future<void> sendPasswordReset({
+    required String email,
+    required String languageCode,
+  }) async {
+    final AuthFailure? f = failure;
+    if (f != null) throw f;
+    resets.add('$email|$languageCode');
+  }
+
+  final List<String> languages = <String>[];
+
+  @override
+  Future<void> saveLanguage(String languageCode) async =>
+      languages.add(languageCode);
 
   @override
   Future<void> logout() async => logouts++;
@@ -89,10 +116,36 @@ class _Repository extends Fake implements AuthRepository {
   }
 }
 
+/// Signing out's push clean-up, counted.
+class _Device implements DeviceRegistration {
+  int unregisters = 0;
+
+  @override
+  Future<void> unregister() async => unregisters++;
+}
+
+/// The notification permission, as a phone would answer.
+class _Push extends Fake implements PushNotifications {
+  PushPermission answer = PushPermission.notAsked;
+  int requests = 0;
+
+  @override
+  Future<PushPermission> permission() async => answer;
+
+  @override
+  Future<PushPermission> requestPermission() async {
+    requests++;
+    return answer = PushPermission.allowed;
+  }
+}
+
 void main() {
   EasyLocalization.logger.enableBuildModes = [];
   late _Repository repository;
   late AppNotifier notices;
+  late _Device device;
+  late _Push push;
+  late MemoryCountryRepository countries;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -104,11 +157,19 @@ void main() {
     await EasyLocalization.ensureInitialized();
     repository = _Repository();
     notices = AppNotifier();
+    device = _Device();
+    push = _Push();
+    countries = MemoryCountryRepository();
     await sl.reset();
     sl
       ..registerSingleton<AppNotifier>(notices)
       ..registerFactory<AuthCubit>(() => AuthCubit(repository))
-      ..registerFactory<AccountCubit>(() => AccountCubit(repository));
+      ..registerFactory<PasswordResetCubit>(
+        () => PasswordResetCubit(repository),
+      )
+      ..registerFactory<AccountCubit>(() => AccountCubit(repository, device))
+      ..registerFactory<PushPermissionCubit>(() => PushPermissionCubit(push))
+      ..registerFactory<CountryCubit>(() => CountryCubit(countries));
   });
   tearDown(sl.reset);
 
@@ -130,6 +191,12 @@ void main() {
         route(AppRoutes.home, const Scaffold(body: Text('home'))),
         route(AppRoutes.login, const LoginPage()),
         route(AppRoutes.register, const RegisterPage()),
+        GoRoute(
+          path: '/${AppRoutes.forgotPassword}',
+          name: AppRoutes.forgotPassword,
+          builder: (_, GoRouterState state) =>
+              ForgotPasswordPage(email: state.extra as String? ?? ''),
+        ),
         route(AppRoutes.profile, const ProfilePage()),
         route(AppRoutes.editProfile, const EditProfilePage()),
         route(AppRoutes.settings, const SettingsPage()),
@@ -205,36 +272,40 @@ void main() {
       expect(router.state.name, AppRoutes.home);
     });
 
-    testWidgets('a wrong password shows under its field; the email stays', (
+    // One message for a wrong email or password: nothing tells which emails
+    // have accounts.
+    testWidgets('wrong credentials show under the password; the email stays', (
       WidgetTester tester,
     ) async {
-      repository.failure = const AuthFailure(AuthFailureCode.wrongPassword);
+      repository.failure = const AuthFailure(
+        AuthFailureCode.invalidCredentials,
+      );
       await pumpApp(tester, AppRoutes.login);
       await fill(tester);
       await tapText(tester, 'auth.login.submit');
 
-      expect(find.text('auth.errors.wrongPassword'.tr()), findsOneWidget);
+      expect(find.text('auth.errors.invalidCredentials'.tr()), findsOneWidget);
       expect(find.text('Sara@Example.com'), findsOneWidget);
       expect(notices.current, isNull);
 
       await type(tester, 1, 'Secret1234');
       await tester.pump();
-      expect(find.text('auth.errors.wrongPassword'.tr()), findsNothing);
+      expect(find.text('auth.errors.invalidCredentials'.tr()), findsNothing);
     });
 
-    testWidgets('an unknown email is a notification offering registration', (
+    testWidgets('no connection is a notification; nothing else changes', (
       WidgetTester tester,
     ) async {
-      repository.failure = const AuthFailure(AuthFailureCode.noAccount);
+      repository.failure = const AuthFailure(AuthFailureCode.network);
       final GoRouter router = await pumpApp(tester, AppRoutes.login);
       await fill(tester);
       await tapText(tester, 'auth.login.submit');
 
+      expect(router.state.name, AppRoutes.login);
       expect(notices.current?.kind, AppNotificationKind.error);
-      expect(find.text('auth.errors.noAccount.message'.tr()), findsOneWidget);
-      await tapText(tester, 'auth.errors.noAccount.action');
-      expect(router.state.name, AppRoutes.register);
-      expect(notices.current, isNull);
+      expect(find.text('auth.errors.network'.tr()), findsOneWidget);
+      expect(find.text('Sara@Example.com'), findsOneWidget);
+      await outlast(tester);
     });
 
     testWidgets('while it runs, a second tap does not submit again', (
@@ -261,19 +332,34 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('forgot password says plainly that reset is not available', (
+    testWidgets('forgot password sends a reset link in the app language', (
       WidgetTester tester,
     ) async {
       final GoRouter router = await pumpApp(tester, AppRoutes.login);
+      await type(tester, 0, 'Sara@Example.com');
       await tapText(tester, 'auth.login.forgotPassword');
+      expect(router.state.name, AppRoutes.forgotPassword);
+      // The email typed on login comes along.
+      expect(find.text('Sara@Example.com'), findsOneWidget);
 
+      await tapText(tester, 'auth.reset.send');
+      expect(repository.resets, <String>['Sara@Example.com|en']);
+      // The same words whether or not the email has an account.
+      expect(find.text('auth.reset.sent'.tr()), findsOneWidget);
+      expect(find.text('auth.reset.send'.tr()), findsNothing);
+
+      await tapText(tester, 'auth.reset.back');
       expect(router.state.name, AppRoutes.login);
-      expect(
-        notices.current?.title,
-        'auth.notices.resetUnavailable.title'.tr(),
-      );
-      await outlast(tester);
-      expect(notices.current, isNull);
+    });
+
+    testWidgets('a reset with a malformed email never leaves the phone', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester, AppRoutes.login);
+      await tapText(tester, 'auth.login.forgotPassword');
+      await tapText(tester, 'auth.reset.send');
+      expect(repository.resets, isEmpty);
+      expect(find.text('validation.required'.tr()), findsOneWidget);
     });
   });
 
@@ -328,13 +414,13 @@ void main() {
   });
 
   group('profile', () {
-    testWidgets('shows the account, marked local and unverified', (
+    testWidgets('shows the account, kept in the account, phone unverified', (
       WidgetTester tester,
     ) async {
       await pumpApp(tester, AppRoutes.profile);
       expect(find.text('Sara Ahmed'), findsOneWidget);
       expect(find.text('sara@example.com'), findsOneWidget);
-      expect(find.text('profile.deviceOnly'.tr()), findsOneWidget);
+      expect(find.text('profile.accountNote'.tr()), findsOneWidget);
       expect(
         find.textContaining('profile.phoneUnverified'.tr()),
         findsOneWidget,
@@ -364,6 +450,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.logouts, 1);
+      expect(device.unregisters, 1);
       expect(router.state.name, AppRoutes.welcome);
       expect(notices.current?.title, 'auth.notices.signedOut.title'.tr());
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -413,7 +500,24 @@ void main() {
       expect(prefs.getString('prefs.themeMode'), 'light');
     });
 
-    testWidgets('about says what stays on the phone and what is not built', (
+    testWidgets('the country row asks, then shows and changes the country', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester, AppRoutes.profile);
+      final Finder row = find.text('country.title'.tr());
+      await tester.ensureVisible(row);
+      expect(find.text('country.notChosen'.tr()), findsOneWidget);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(find.text('country.picker.title'.tr()), findsOneWidget);
+      await tester.tap(find.text('Egypt'));
+      await tester.pumpAndSettle();
+      expect(countries.code, 'EG');
+      expect(find.text('🇪🇬  Egypt'), findsOneWidget);
+    });
+
+    testWidgets('about says where information is kept and what is not built', (
       WidgetTester tester,
     ) async {
       final GoRouter router = await pumpApp(tester, AppRoutes.profile);
@@ -421,8 +525,49 @@ void main() {
       await tapText(tester, 'profile.about.title');
       expect(router.state.name, AppRoutes.about);
       expect(find.text('about.stored.title'.tr()), findsOneWidget);
+      expect(find.text('about.stored.route'.tr()), findsOneWidget);
+      // The list is lazy: bring the second section into view.
+      await tester.scrollUntilVisible(
+        find.text('about.notYet.title'.tr()),
+        200,
+      );
       expect(find.text('about.notYet.title'.tr()), findsOneWidget);
-      expect(find.text('about.notYet.tracking'.tr()), findsOneWidget);
+      expect(find.text('about.notYet.sharing'.tr()), findsOneWidget);
+    });
+
+    // The only place the app asks for the permission, and only on a tap.
+    testWidgets('the notifications row asks only when tapped', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester, AppRoutes.profile);
+      await tester.ensureVisible(find.text('profile.notifications.title'.tr()));
+      expect(find.text('profile.notifications.notAsked'.tr()), findsOneWidget);
+      expect(push.requests, 0);
+
+      await tapText(tester, 'profile.notifications.title');
+      expect(push.requests, 1);
+      expect(find.text('profile.notifications.allowed'.tr()), findsOneWidget);
+    });
+
+    testWidgets('a refused permission is explained, never asked again', (
+      WidgetTester tester,
+    ) async {
+      push.answer = PushPermission.blocked;
+      await pumpApp(tester, AppRoutes.profile);
+      await tester.ensureVisible(find.text('profile.notifications.title'.tr()));
+      await tapText(tester, 'profile.notifications.title');
+      expect(push.requests, 0);
+      expect(notices.current?.message, 'profile.notifications.howToAllow'.tr());
+      await outlast(tester);
+    });
+
+    testWidgets('a language chosen in settings is kept with the account', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester, AppRoutes.settings);
+      await tester.tap(find.text('العربية'));
+      await tester.pumpAndSettle();
+      expect(repository.languages, <String>['ar']);
     });
   });
 }

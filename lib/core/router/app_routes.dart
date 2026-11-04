@@ -17,6 +17,10 @@ abstract final class AppRoutes {
   static const String register = 'register';
   static const String registerPath = '/register';
 
+  /// `extra`: the email typed on the login screen, if any.
+  static const String forgotPassword = 'forgot-password';
+  static const String forgotPasswordPath = '/forgot-password';
+
   // The signed-in tabs (`AppTabShell`): each keeps its own stack.
 
   /// The journey dashboard — where signing in lands.
@@ -52,6 +56,11 @@ abstract final class AppRoutes {
   static const String editJourney = 'edit-journey';
   static const String editJourneyPath = '/journey/edit/:id';
 
+  /// The pre-journey checklist that starts a planned journey; path
+  /// parameter `id`.
+  static const String startJourney = 'start-journey';
+  static const String startJourneyPath = '/journey/start/:id';
+
   // Safety screens, pushed over the tabs.
 
   static const String trustedContacts = 'trusted-contacts';
@@ -73,10 +82,21 @@ abstract final class AppRoutes {
   static const String emergencyInfo = 'emergency-info';
   static const String emergencyInfoPath = '/safety/emergency';
 
+  /// Alerts received as someone's trusted contact.
+  static const String safetyAlerts = 'safetyAlerts';
+  static const String safetyAlertsPath = '/safety/alerts';
+
+  /// Entering an invite code to become someone's trusted contact.
+  static const String acceptInvite = 'accept-invite';
+  static const String acceptInvitePath = '/safety/invite';
+
   // Profile screens, pushed over the tabs.
 
   static const String editProfile = 'edit-profile';
   static const String editProfilePath = '/profile/edit';
+
+  static const String deleteAccount = 'delete-account';
+  static const String deleteAccountPath = '/profile/delete';
 
   /// Language and appearance.
   static const String settings = 'settings';

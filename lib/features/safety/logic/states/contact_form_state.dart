@@ -43,6 +43,12 @@ final class ContactFormDeleted extends ContactFormState {
   const ContactFormDeleted();
 }
 
+/// Editing: the contact could not be read. Nothing can be saved or deleted
+/// until a retry reads it — never an add in its place.
+final class ContactFormUnreadable extends ContactFormState {
+  const ContactFormUnreadable();
+}
+
 /// The contact to edit does not exist (a stale link).
 final class ContactFormMissing extends ContactFormState {
   const ContactFormMissing();

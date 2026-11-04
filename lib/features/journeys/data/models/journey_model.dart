@@ -1,24 +1,32 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:safe_ride/core/firebase/timestamp_converter.dart';
 
 part 'journey_model.freezed.dart';
 part 'journey_model.g.dart';
 
-/// Where a journey stands. The user sets every change — SafeRide does not
-/// track a journey, so there is deliberately no "in progress": a status that
-/// suggests someone is watching over a trip would be false reassurance.
+/// Where a journey stands. The user sets every change; nothing tracks the
+/// journey, so `active` means only "the user started it" — never that
+/// anyone watches over the trip.
 enum JourneyStatus {
-  /// Confirmed after review; not yet over.
+  /// Confirmed after review; not started yet.
   planned,
+
+  /// Started, after its pre-journey safety checklist was confirmed.
+  active,
 
   /// The user said they arrived.
   completed,
 
   /// The user called it off.
-  cancelled,
+  cancelled;
+
+  /// Still open: it can be cancelled, and it is not history yet.
+  bool get isOpen => this == planned || this == active;
 }
 
-/// One journey the user planned on this phone. Places are the user's own
-/// words — no geocoding, no coordinates.
+/// One journey the user planned, stored in their account
+/// (`users/{uid}/journeys/{id}`, docs/firebase-architecture.md §5.3). Places
+/// are the user's own words — no geocoding, no coordinates.
 @freezed
 abstract class JourneyModel with _$JourneyModel {
   const factory JourneyModel({
@@ -27,16 +35,17 @@ abstract class JourneyModel with _$JourneyModel {
     required String destination,
     required JourneyStatus status,
 
-    /// UTC.
-    required DateTime createdAt,
+    /// UTC; when the user means to set off.
+    @TimestampConverter() required DateTime departsAt,
 
-    /// UTC; the last change (an edit or a status).
-    required DateTime updatedAt,
+    /// UTC; set by the server when the journey is saved.
+    @TimestampConverter() required DateTime createdAt,
 
-    /// UTC; when the user means to set off. Every journey planned from
-    /// batch 4 on has one; null only on a journey stored before the field
-    /// existed — shown as "not set", never guessed.
-    DateTime? departsAt,
+    /// UTC; the last change (an edit or a status), set by the server.
+    @TimestampConverter() required DateTime updatedAt,
+
+    /// UTC; when the user started it, set by the server. Null until then.
+    @NullableTimestampConverter() DateTime? startedAt,
   }) = _JourneyModel;
 
   factory JourneyModel.fromJson(Map<String, dynamic> json) =>

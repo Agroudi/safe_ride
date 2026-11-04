@@ -18,8 +18,8 @@ import 'package:safe_ride/features/authentication/presentation/widgets/auth_noti
 import 'package:safe_ride/features/authentication/presentation/widgets/profile_fields.dart';
 
 /// Edit the two profile fields there are: full name and the optional (never
-/// verified) phone. The email is shown but cannot change — it is the
-/// account's key on this phone. Saving pops back to Profile, which reloads
+/// verified) phone. The email is shown but cannot change here — it is how
+/// the user signs in. Saving pops back to Profile, which reloads
 /// from the repository's change stream.
 class EditProfilePage extends StatelessWidget {
   const EditProfilePage({super.key});

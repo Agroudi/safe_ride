@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -13,10 +17,14 @@ import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/notifications/notification_host.dart';
 import 'package:safe_ride/core/preferences/preferences_cubit.dart';
 import 'package:safe_ride/core/preferences/preferences_state.dart';
+import 'package:safe_ride/core/push/push_background.dart';
+import 'package:safe_ride/core/push/push_notifications.dart';
 import 'package:safe_ride/core/router/app_back_dispatcher.dart';
 import 'package:safe_ride/core/router/app_router.dart';
 import 'package:safe_ride/core/theme/app_theme.dart';
 import 'package:safe_ride/core/theme/system_bars.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/safety_check_host.dart';
+import 'package:safe_ride/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +44,12 @@ Future<void> main() async {
   await EasyLocalization.ensureInitialized();
   // Journey dates are drawn in `ar_EG` digits (`LocaleNumbers.dateTime`).
   await initializeDateFormatting();
+  // Before the service locator: every repository is a Firebase client.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(pushBackgroundHandler);
   await setupServiceLocator();
+  // Not awaited: notifications must never hold up the first frame.
+  unawaited(sl<PushNotifications>().start(AppRouter.router));
 
   // The saved theme's bar icons from the very first frame — see
   // `SystemBars.styleForMode`.
@@ -108,7 +121,10 @@ class App extends StatelessWidget {
                           child: SystemBars(
                             child: NotificationHost(
                               notifier: sl<AppNotifier>(),
-                              child: child ?? const SizedBox.shrink(),
+                              // "Are you okay?" over every route too.
+                              child: SafetyCheckHost(
+                                child: child ?? const SizedBox.shrink(),
+                              ),
                             ),
                           ),
                         ),

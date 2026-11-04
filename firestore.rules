@@ -1,0 +1,366 @@
+rules_version = '2';
+
+// SafeRide's Firestore Security Rules — the security boundary for every
+// account's data (docs/firebase-architecture.md §8). The app's own checks
+// are for feedback; everything that must hold is restated here.
+//
+// - Only a signed-in user reaches their own `users/{uid}`; nobody else does.
+// - Every document's fields are listed, typed and sized.
+// - Server timestamps (`createdAt`, `updatedAt`) must be the server's time.
+// - A journey starts (planned → active) only in the same write as its
+//   complete pre-journey checklist record; only a planned journey is
+//   edited; active → completed; closing changes only the status; a closed
+//   journey never reopens.
+// - A journey's recorded route (chunks of points and one summary) is the
+//   owner's alone, and only exists under a journey that has started.
+// - An unanswered safety check reaches the server as one write of the check
+//   and its incident, never changed afterwards. What became of it
+//   (escalations and their attempts, contact links, alerts received) is
+//   written by the backend only: no client can mark anything sent or
+//   delivered, or make itself someone's contact.
+// - Anything not matched below is refused.
+//
+// Deploy: firebase deploy --only firestore:rules (see firebase.json).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function text(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    function optionalText(d, k, min, max) {
+      return !(k in d) || d[k] == null || text(d[k], min, max);
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // The profile. Email and passwords live in Firebase Authentication, never
+    // here.
+    match /users/{uid} {
+      function validProfile(d) {
+        return d.keys().hasOnly(['fullName', 'phone', 'locale', 'country',
+                                 'updatedAt'])
+          && d.keys().hasAll(['fullName', 'updatedAt'])
+          && text(d.fullName, 2, 200)
+          && optionalText(d, 'phone', 7, 25)
+          && (!('locale' in d) || d.locale in ['ar', 'en'])
+          // The country the user says they are in (ISO 3166-1 alpha-2): what
+          // the emergency numbers follow. A new country needs no new rule.
+          && (!('country' in d) || (d.country is string
+                                     && d.country.matches('^[A-Z]{2}$')))
+          && d.updatedAt == request.time;
+      }
+
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validProfile(request.resource.data);
+      allow delete: if isOwner(uid);
+
+      match /journeys/{journeyId} {
+        function validJourney(d) {
+          return d.keys().hasOnly(['origin', 'destination', 'departsAt',
+                                   'status', 'createdAt', 'updatedAt',
+                                   'startedAt'])
+            && d.keys().hasAll(['origin', 'destination', 'departsAt',
+                                'status', 'createdAt', 'updatedAt'])
+            && text(d.origin, 2, 120)
+            && text(d.destination, 2, 120)
+            && d.departsAt is timestamp
+            && d.status in ['planned', 'active', 'completed', 'cancelled']
+            && d.updatedAt == request.time;
+        }
+
+        function checklistPath() {
+          return /databases/$(database)/documents/users/$(uid)/journeys/$(journeyId)/checklists/preJourney;
+        }
+
+        // The journey only starts in the same write as its complete checklist
+        // record (see `checklists` below).
+        function startedWithChecklist() {
+          return existsAfter(checklistPath())
+            && getAfter(checklistPath()).data.complete == true;
+        }
+
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && validJourney(request.resource.data)
+          && request.resource.data.status == 'planned'
+          && !('startedAt' in request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        // planned: edited (staying planned, never given a start time),
+        //   cancelled, or started — only with its checklist;
+        // active: completed or cancelled, nothing else changing;
+        // completed / cancelled: never change again.
+        allow update: if isOwner(uid)
+          && validJourney(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt
+          && (
+            (resource.data.status == 'planned'
+              && request.resource.data.status == 'planned'
+              && !('startedAt' in request.resource.data))
+            || (resource.data.status == 'planned'
+              && request.resource.data.status == 'cancelled'
+              && changedOnly(['status', 'updatedAt']))
+            || (resource.data.status == 'planned'
+              && request.resource.data.status == 'active'
+              && changedOnly(['status', 'updatedAt', 'startedAt'])
+              && request.resource.data.startedAt == request.time
+              && startedWithChecklist())
+            || (resource.data.status == 'active'
+              && request.resource.data.status in ['completed', 'cancelled']
+              && changedOnly(['status', 'updatedAt']))
+          );
+        // The app never deletes a journey; the owner may (account clean-up).
+        allow delete: if isOwner(uid);
+
+        // The pre-journey safety checklist: one record per journey, written
+        // with the journey's start and never changed — history keeps exactly
+        // what was confirmed, under the version that asked it.
+        match /checklists/{checklistId} {
+          function journeyPath() {
+            return /databases/$(database)/documents/users/$(uid)/journeys/$(journeyId);
+          }
+
+          // Each released version's items. A new version adds a line here
+          // and in `JourneyChecklist.versions`; old lines stay.
+          function confirmsVersion(d) {
+            return d.version == 1
+              && d.items.size() == 9
+              && d.items.hasAll(['vehicle', 'energy', 'tiresBrakes',
+                                 'documents', 'fitness', 'sober',
+                                 'phoneBattery', 'contacts', 'assistance']);
+          }
+
+          function validChecklist(d) {
+            return d.keys().hasOnly(['journeyId', 'uid', 'version', 'items',
+                                     'complete', 'completedAt'])
+              && d.keys().hasAll(['journeyId', 'uid', 'version', 'items',
+                                  'complete', 'completedAt'])
+              && d.journeyId == journeyId
+              && d.uid == uid
+              && d.version is int
+              && d.items is list
+              && d.complete == true
+              && confirmsVersion(d)
+              && d.completedAt == request.time;
+          }
+
+          allow read: if isOwner(uid);
+          // Only together with the journey going from planned to active.
+          allow create: if isOwner(uid)
+            && checklistId == 'preJourney'
+            && validChecklist(request.resource.data)
+            && get(journeyPath()).data.status == 'planned'
+            && getAfter(journeyPath()).data.status == 'active';
+          allow update: if false;
+          allow delete: if isOwner(uid);
+        }
+
+        // The route the phone recorded while the journey was in progress
+        // (JourneyTracker), sent in chunks of at most 100 points - possibly
+        // after the journey ended, when the phone was offline. A retry
+        // rewrites the same chunk.
+        function started() {
+          return get(/databases/$(database)/documents/users/$(uid)/journeys/$(journeyId))
+            .data.status in ['active', 'completed', 'cancelled'];
+        }
+
+        match /route/{chunkId} {
+          function validPoint(p) {
+            return p is map
+              && p.keys().hasOnly(['lat', 'lng', 'at', 'acc', 'spd', 'seg'])
+              && p.keys().hasAll(['lat', 'lng', 'at', 'acc', 'seg'])
+              && p.lat is number && p.lat >= -90 && p.lat <= 90
+              && p.lng is number && p.lng >= -180 && p.lng <= 180
+              && p.at is timestamp
+              && p.acc is number && p.acc >= 0
+              && (!('spd' in p) || p.spd == null || (p.spd is number && p.spd >= 0))
+              && p.seg is int && p.seg >= 0;
+          }
+
+          // Rules cannot loop: the first and last points are checked, and
+          // the size is bounded.
+          function validChunk(d) {
+            return d.keys().hasOnly(['chunk', 'points', 'updatedAt'])
+              && d.keys().hasAll(['chunk', 'points', 'updatedAt'])
+              && chunkId.matches('^[0-9]{5}$')
+              && d.chunk is int && d.chunk == int(chunkId)
+              && d.points is list
+              && d.points.size() >= 1 && d.points.size() <= 100
+              && validPoint(d.points[0])
+              && validPoint(d.points[d.points.size() - 1])
+              && d.updatedAt == request.time;
+          }
+
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && validChunk(request.resource.data)
+            && started();
+          allow delete: if isOwner(uid);
+        }
+
+        match /tracking/{docId} {
+          function validSummary(d) {
+            return d.keys().hasOnly(['distanceMeters', 'pointCount',
+                                     'recording', 'firstAt', 'lastAt',
+                                     'updatedAt'])
+              && d.keys().hasAll(['distanceMeters', 'pointCount', 'recording',
+                                  'updatedAt'])
+              && d.distanceMeters is number && d.distanceMeters >= 0
+              && d.pointCount is int && d.pointCount >= 0
+              && d.recording is bool
+              && (!('firstAt' in d) || d.firstAt == null || d.firstAt is timestamp)
+              && (!('lastAt' in d) || d.lastAt == null || d.lastAt is timestamp)
+              && d.updatedAt == request.time;
+          }
+
+          allow read: if isOwner(uid);
+          allow create, update: if isOwner(uid)
+            && docId == 'summary'
+            && validSummary(request.resource.data)
+            && started();
+          allow delete: if isOwner(uid);
+        }
+      }
+
+      match /contacts/{contactId} {
+        function validContact(d) {
+          return d.keys().hasOnly(['fullName', 'phone', 'phoneDigits',
+                                   'relationship', 'createdAt', 'updatedAt'])
+            && d.keys().hasAll(['fullName', 'phone', 'phoneDigits',
+                                'createdAt', 'updatedAt'])
+            && text(d.fullName, 2, 200)
+            && text(d.phone, 7, 25)
+            && d.phoneDigits is string
+            && d.phoneDigits.matches('^[0-9]{7,20}$')
+            && optionalText(d, 'relationship', 1, 40)
+            && d.updatedAt == request.time;
+        }
+
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && validContact(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if isOwner(uid)
+          && validContact(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
+      // An unanswered safety check, as the phone reports it: the request the
+      // backend acts on (functions/src/escalation.ts), which checks it all
+      // again. The check and its incident arrive in one write, offline too,
+      // and are the record of what the phone said: nothing changes them.
+      match /safetyChecks/{checkId} {
+        function incidentPath(d) {
+          return /databases/$(database)/documents/users/$(uid)/incidents/$(d.incidentId);
+        }
+
+        function validCheck(d) {
+          return d.keys().hasOnly(['uid', 'journeyId', 'incidentId', 'status',
+                                   'startedAt', 'deadline', 'timedOutAt',
+                                   'escalationReadyAt', 'syncedAt'])
+            && d.keys().hasAll(['uid', 'journeyId', 'incidentId', 'status',
+                                'startedAt', 'deadline', 'timedOutAt',
+                                'escalationReadyAt', 'syncedAt'])
+            && d.uid == uid
+            && text(d.journeyId, 1, 128)
+            && text(d.incidentId, 1, 200)
+            && d.status == 'escalationReady'
+            && d.startedAt is timestamp
+            && d.deadline is timestamp
+            && d.deadline < request.time
+            && d.timedOutAt == d.deadline
+            && d.escalationReadyAt is timestamp
+            && d.syncedAt == request.time;
+        }
+
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && validCheck(request.resource.data)
+          && exists(/databases/$(database)/documents/users/$(uid)/journeys/$(request.resource.data.journeyId))
+          && existsAfter(incidentPath(request.resource.data))
+          && getAfter(incidentPath(request.resource.data)).data.safetyCheckId == checkId
+          && getAfter(incidentPath(request.resource.data)).data.journeyId == request.resource.data.journeyId;
+        allow update, delete: if false;
+      }
+
+      // The potential incident a safety check asked about: what the backend
+      // needs, and no location.
+      match /incidents/{incidentId} {
+        function validIncident(d) {
+          return d.keys().hasOnly(['journeyId', 'safetyCheckId', 'type',
+                                   'confidence', 'detectedAt', 'createdAt'])
+            && d.keys().hasAll(['journeyId', 'safetyCheckId', 'type',
+                                'confidence', 'detectedAt', 'createdAt'])
+            && text(d.journeyId, 1, 128)
+            && text(d.safetyCheckId, 1, 200)
+            && d.type in ['suddenDeceleration', 'prolongedStop']
+            && d.confidence in ['medium', 'high']
+            && d.detectedAt is timestamp
+            && d.createdAt == request.time;
+        }
+
+        allow read: if isOwner(uid);
+        // Only together with its safety check.
+        allow create: if isOwner(uid)
+          && validIncident(request.resource.data)
+          && !exists(/databases/$(database)/documents/users/$(uid)/safetyChecks/$(request.resource.data.safetyCheckId))
+          && existsAfter(/databases/$(database)/documents/users/$(uid)/safetyChecks/$(request.resource.data.safetyCheckId));
+        allow update, delete: if false;
+      }
+
+      // What the backend did about a request: its status and one attempt per
+      // contact. The owner reads it; only the backend writes it.
+      match /escalations/{escalationId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+
+        match /attempts/{attemptId} {
+          allow read: if isOwner(uid);
+          allow write: if false;
+        }
+      }
+
+      // Who accepted this user's invite, by contact. The backend writes it
+      // when the invited person accepts, so nobody links themselves.
+      match /contactLinks/{contactId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+
+      // Alerts this user received as someone's trusted contact: the only
+      // copy of another account's data they ever see, and it holds no
+      // location.
+      match /receivedAlerts/{alertId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+
+      // One per install that receives notifications: its FCM installation id.
+      match /devices/{installId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['fid', 'platform', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['fid', 'platform', 'updatedAt'])
+          && text(request.resource.data.fid, 10, 4096)
+          && request.resource.data.platform in ['android', 'ios']
+          && request.resource.data.updatedAt == request.time;
+      }
+    }
+
+    // Everything else — `contactInvites` (backend only) and whatever later
+    // features add — is closed until its rules are written.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

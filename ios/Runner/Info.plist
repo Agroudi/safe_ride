@@ -14,6 +14,11 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>safe_ride</string>
 	<key>CFBundlePackageType</key>
@@ -56,8 +61,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -65,6 +68,27 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>FirebaseMessagingInstallationIdEnabled</key>
+	<true/>
+	<!-- A journey's route: read only while a journey the user started is in
+	     progress, while in use (the recording keeps going in the background
+	     with the location indicator - UIBackgroundModes location). SafeRide
+	     never asks for "Always"; the second key is required by the App Store
+	     because the location plugin can ask for it. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SafeRide records your route, speed and distance only while a journey you started is in progress, and stops when you complete or cancel it.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SafeRide records your route only while a journey you started is in progress. It does not need your location at any other time.</string>
+	<!-- Emergency numbers' Call: lets the app ask whether this device can
+	     place calls (an iPad cannot) before opening the call prompt. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
 	</array>
 </dict>
 </plist>

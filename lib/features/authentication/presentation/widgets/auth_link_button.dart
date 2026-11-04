@@ -18,13 +18,18 @@ class AuthLinkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onPressed,
-      // A few pixels of padding so the tap target is bigger than the glyphs.
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 4.fx),
-        child: Text(label, textAlign: TextAlign.center, style: style),
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: onPressed != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        // Padding so the tap target is a finger, not the glyphs.
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12.fx),
+          child: Text(label, textAlign: TextAlign.center, style: style),
+        ),
       ),
     );
   }

@@ -92,4 +92,21 @@ abstract final class AppDurations {
   /// How long a warning or an error stays up — long enough to read twice.
   /// Under TalkBack every notification stays until dismissed.
   static const Duration noticeLong = Duration(seconds: 8);
+
+  /// How long a Firestore write waits for the server before the app treats
+  /// it as saved on the phone and syncing later. Offline, a write's future
+  /// only completes when the server confirms it — waiting for that would
+  /// leave the button spinning (docs/firebase-architecture.md §6.2).
+  static const Duration syncWait = Duration(seconds: 4);
+}
+
+/// What this build can do, set at build time.
+abstract final class AppFeatures {
+  /// Whether a backend processes trusted-contact alerts. **Off**: the project
+  /// stays on Firebase's Spark plan, where Cloud Functions cannot run, so
+  /// nothing could ever send one. Off, the app sends no request, offers no
+  /// invites and says plainly that nobody was alerted. Turn it on only for a
+  /// build whose backend is deployed (`docs/escalation.md` §10):
+  /// `--dart-define=CONTACT_ALERTS=true`.
+  static const bool contactAlerts = bool.fromEnvironment('CONTACT_ALERTS');
 }

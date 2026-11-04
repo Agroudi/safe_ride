@@ -20,7 +20,10 @@ class JourneyTile extends StatelessWidget {
     this.cancelLabel,
     this.moreLabel,
     super.key,
-  });
+  }) : assert(
+         onCancel == null || cancelLabel != null,
+         'A cancel menu needs its label.',
+       );
 
   final String origin;
   final String destination;

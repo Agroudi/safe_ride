@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firestore rules tests (Node)
+test/firestore_rules/node_modules/
+# Firebase CLI logs
+firebase-debug.log
+firestore-debug.log
+
+# Secrets: never in this repository, wherever they land.
+*.jks
+*.keystore
+*.p8
+*.p12
+key.properties
+.env
+.env.*
+.runtimeconfig.json
+*adminsdk*.json
+*service-account*.json

@@ -11,7 +11,7 @@ _TrustedContactModel _$TrustedContactModelFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       fullName: json['fullName'] as String,
       phone: json['phone'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: const TimestampConverter().fromJson(json['createdAt']),
       relationship: json['relationship'] as String?,
     );
 
@@ -21,6 +21,6 @@ Map<String, dynamic> _$TrustedContactModelToJson(
   'id': instance.id,
   'fullName': instance.fullName,
   'phone': instance.phone,
-  'createdAt': instance.createdAt.toIso8601String(),
+  'createdAt': const TimestampConverter().toJson(instance.createdAt),
   'relationship': instance.relationship,
 };

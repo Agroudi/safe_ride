@@ -1,11 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:safe_ride/core/firebase/timestamp_converter.dart';
 
 part 'trusted_contact_model.freezed.dart';
 part 'trusted_contact_model.g.dart';
 
-/// Someone the user trusts, kept on this phone. A record only: the number is
-/// **never verified** and the contact is **never notified** — nothing in the
-/// MVP calls, texts or shares with them.
+/// Someone the user trusts, stored in their account
+/// (`users/{uid}/contacts/{id}`). The number is **never verified**. Alerts
+/// reach only a contact who accepted an invite in SafeRide (`contactLinks`);
+/// nothing calls or texts them.
 @freezed
 abstract class TrustedContactModel with _$TrustedContactModel {
   const factory TrustedContactModel({
@@ -15,8 +17,8 @@ abstract class TrustedContactModel with _$TrustedContactModel {
     /// As typed; compared by its digits only.
     required String phone,
 
-    /// UTC.
-    required DateTime createdAt,
+    /// UTC; set by the server when the contact is saved.
+    @TimestampConverter() required DateTime createdAt,
 
     /// "Sister", "Friend" — optional, the user's own word.
     String? relationship,

@@ -20,7 +20,7 @@ import 'package:safe_ride/features/journeys/presentation/widgets/journey_notices
 import 'package:safe_ride/features/journeys/presentation/widgets/journeys_content.dart';
 import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
 
-/// The My Journeys tab: every journey planned on this phone, newest first,
+/// The My Journeys tab: the account's journeys, newest first,
 /// filtered by status, or an empty state that offers the first one. A
 /// planned journey can be cancelled from its tile, after a confirmation.
 /// Reloads by itself whenever a journey is planned or changes.

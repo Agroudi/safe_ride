@@ -4,7 +4,9 @@ import 'package:safe_ride/core/router/app_pages.dart';
 import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/router/app_tab_shell.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/about_page.dart';
+import 'package:safe_ride/features/authentication/presentation/pages/delete_account_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/edit_profile_page.dart';
+import 'package:safe_ride/features/authentication/presentation/pages/forgot_password_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/login_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/onboarding_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/profile_page.dart';
@@ -15,13 +17,16 @@ import 'package:safe_ride/features/authentication/presentation/pages/welcome_pag
 import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/edit_journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/home_page.dart';
+import 'package:safe_ride/features/journeys/presentation/pages/journey_checklist_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/my_journeys_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/plan_journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/review_journey_page.dart';
+import 'package:safe_ride/features/safety/presentation/pages/accept_invite_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/contact_form_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/emergency_info_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/journey_safety_page.dart';
+import 'package:safe_ride/features/safety/presentation/pages/received_alerts_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/safety_center_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/safety_guide_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/trusted_contacts_page.dart';
@@ -63,6 +68,17 @@ abstract final class AppRouter {
     _stage(AppRoutes.welcome, AppRoutes.welcomePath, const WelcomePage()),
     _task(AppRoutes.login, AppRoutes.loginPath, const LoginPage()),
     _task(AppRoutes.register, AppRoutes.registerPath, const RegisterPage()),
+    GoRoute(
+      path: AppRoutes.forgotPasswordPath,
+      name: AppRoutes.forgotPassword,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        ForgotPasswordPage(
+          email: state.extra is String ? state.extra! as String : '',
+        ),
+      ),
+    ),
     StatefulShellRoute(
       pageBuilder: (BuildContext context, GoRouterState state, Widget shell) =>
           AppPages.stage(context, state, shell),
@@ -145,6 +161,15 @@ abstract final class AppRouter {
         EditJourneyPage(id: state.pathParameters['id']!),
       ),
     ),
+    GoRoute(
+      path: AppRoutes.startJourneyPath,
+      name: AppRoutes.startJourney,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        JourneyChecklistPage(id: state.pathParameters['id']!),
+      ),
+    ),
     _task(
       AppRoutes.trustedContacts,
       AppRoutes.trustedContactsPath,
@@ -180,9 +205,24 @@ abstract final class AppRouter {
       const EmergencyInfoPage(),
     ),
     _task(
+      AppRoutes.safetyAlerts,
+      AppRoutes.safetyAlertsPath,
+      const ReceivedAlertsPage(),
+    ),
+    _task(
+      AppRoutes.acceptInvite,
+      AppRoutes.acceptInvitePath,
+      const AcceptInvitePage(),
+    ),
+    _task(
       AppRoutes.editProfile,
       AppRoutes.editProfilePath,
       const EditProfilePage(),
+    ),
+    _task(
+      AppRoutes.deleteAccount,
+      AppRoutes.deleteAccountPath,
+      const DeleteAccountPage(),
     ),
     _task(AppRoutes.settings, AppRoutes.settingsPath, const SettingsPage()),
     _task(AppRoutes.about, AppRoutes.aboutPath, const AboutPage()),

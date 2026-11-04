@@ -1,17 +1,30 @@
 /// Why an authentication call failed — the one error type `AuthRepository`
-/// throws, so a cubit branches on [AuthFailure.code] and never sees a storage
-/// exception.
+/// throws, so a cubit branches on [AuthFailure.code] and never sees a
+/// Firebase exception.
 enum AuthFailureCode {
   /// Register: an account with this email already exists.
   emailTaken,
 
-  /// Login: no account has this email.
-  noAccount,
+  /// Login: the email or the password is wrong. Firebase does not say which
+  /// — telling them apart would reveal which emails have accounts.
+  invalidCredentials,
 
-  /// Login: the password does not match.
-  wrongPassword,
+  /// The server rejected the email's form.
+  invalidEmail,
 
-  /// The device's storage could not be read or written.
+  /// Register: the server rejected the password as too weak.
+  weakPassword,
+
+  /// Too many attempts from this phone; Firebase asks to wait.
+  tooManyRequests,
+
+  /// The server could not be reached.
+  network,
+
+  /// The account was switched off by the project's administrator.
+  disabled,
+
+  /// The profile could not be read or saved.
   storage,
 
   /// Anything else.

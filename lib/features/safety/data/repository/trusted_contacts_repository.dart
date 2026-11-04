@@ -1,8 +1,8 @@
 import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart';
 
-/// The trusted-contacts seam. `LocalTrustedContactsRepository` keeps them on
-/// the phone; a Firebase implementation replaces it behind this interface —
-/// one line in the service locator. Every method throws only
+/// The trusted-contacts seam. `FirestoreTrustedContactsRepository` keeps them
+/// in the account; another backend would be one more implementation, chosen
+/// in the service locator. Every method throws only
 /// `ContactFailure` and works on the signed-in account's contacts.
 abstract interface class TrustedContactsRepository {
   /// Alphabetical by name.

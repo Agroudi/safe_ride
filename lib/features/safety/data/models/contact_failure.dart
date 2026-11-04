@@ -9,10 +9,14 @@ enum ContactFailureCode {
   /// Another contact already has this number.
   duplicatePhone,
 
-  /// The list is full (`LocalTrustedContactsRepository.maxContacts`).
+  /// The list is full (`FirestoreTrustedContactsRepository.maxContacts`).
   full,
 
-  /// The device's storage could not be read or written.
+  /// SafeRide's servers could not be reached, and the phone has no copy.
+  network,
+
+  /// The contacts could not be read or saved (including a change the
+  /// server's rules refused).
   storage,
 }
 

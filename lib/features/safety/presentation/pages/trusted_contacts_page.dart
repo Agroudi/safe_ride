@@ -12,19 +12,27 @@ import 'package:safe_ride/core/shared_widgets/app_primary_button.dart';
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart';
+import 'package:safe_ride/features/safety/data/repository/firestore_trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_links_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contacts_cubit.dart';
 import 'package:safe_ride/features/safety/logic/states/contacts_state.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/contact_tile.dart';
 
 /// The account's trusted contacts, alphabetical, with Add. A contact opens
-/// to edit or delete. The screen says plainly that SafeRide neither verifies
-/// numbers nor contacts anyone.
+/// to edit or delete. The screen says plainly what SafeRide does not do with
+/// them.
 class TrustedContactsPage extends StatelessWidget {
   const TrustedContactsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => BlocProvider<ContactsCubit>(
-    create: (_) => sl<ContactsCubit>()..load(),
+  Widget build(BuildContext context) => MultiBlocProvider(
+    providers: <BlocProvider<dynamic>>[
+      BlocProvider<ContactsCubit>(create: (_) => sl<ContactsCubit>()..load()),
+      if (AppFeatures.contactAlerts)
+        BlocProvider<ContactLinksCubit>(
+          create: (_) => sl<ContactLinksCubit>()..load(),
+        ),
+    ],
     child: const _TrustedContactsView(),
   );
 }
@@ -35,6 +43,9 @@ class _TrustedContactsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     void add() => context.pushNamed(AppRoutes.addContact);
+    final Map<String, String>? links = AppFeatures.contactAlerts
+        ? context.watch<ContactLinksCubit>().state
+        : null;
 
     return Scaffold(
       body: SafeArea(
@@ -83,6 +94,16 @@ class _TrustedContactsView extends StatelessWidget {
                           name: c.fullName,
                           phone: c.phone,
                           relationship: c.relationship,
+                          alerts: links == null
+                              ? null
+                              : context.tr(
+                                  links[c.id] ==
+                                          FirestoreTrustedContactsRepository.digitsOf(
+                                            c.phone,
+                                          )
+                                      ? 'safety.contacts.alertsOn'
+                                      : 'safety.contacts.alertsOff',
+                                ),
                           onTap: () => context.pushNamed(
                             AppRoutes.editContact,
                             pathParameters: <String, String>{'id': c.id},

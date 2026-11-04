@@ -9,7 +9,7 @@ import 'package:safe_ride/core/theme/app_colors.dart';
 /// [name] null draws a loading state of the same height.
 class SettingsAccountCard extends StatelessWidget {
   const SettingsAccountCard({
-    required this.deviceOnlyLabel,
+    required this.accountNote,
     required this.unverifiedLabel,
     this.name,
     this.email,
@@ -20,7 +20,7 @@ class SettingsAccountCard extends StatelessWidget {
   final String? name;
   final String? email;
   final String? phone;
-  final String deviceOnlyLabel;
+  final String accountNote;
   final String unverifiedLabel;
 
   /// [value] in a left-to-right isolate (U+2066 … U+2069), so a `+` and the
@@ -88,7 +88,7 @@ class SettingsAccountCard extends StatelessWidget {
                           '${_ltr(number)}  ·  $unverifiedLabel',
                           style: quiet,
                         ),
-                      Text(deviceOnlyLabel, style: quiet),
+                      Text(accountNote, style: quiet),
                     ],
                   ),
                 ),

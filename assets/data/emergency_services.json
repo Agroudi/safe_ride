@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "about": "SafeRide's emergency numbers. Change a number only against an official source, update checkedOn, and keep both languages. emergency_data_source_test rejects an invalid entry. Status: official = an official national source states it; secondary = only a foreign government's travel advice. Unverified numbers are left out.",
+  "countries": [
+    {
+      "code": "SA",
+      "checkedOn": "2026-11-03",
+      "note": {
+        "en": "911 answers every emergency in Riyadh, Makkah, Madinah and the Eastern Province. Elsewhere in the Kingdom, call the service's own number.",
+        "ar": "يستقبل ٩١١ كل حالات الطوارئ في الرياض ومكة المكرمة والمدينة المنورة والمنطقة الشرقية. وفي بقية مناطق المملكة، اتصل برقم الخدمة نفسها."
+      },
+      "services": [
+        {
+          "types": ["general"],
+          "number": "911",
+          "verification": "official",
+          "sources": ["sa-spa-911", "sa-cst"]
+        },
+        { "types": ["police"], "number": "999", "verification": "official", "sources": ["sa-cst"] },
+        { "types": ["ambulance"], "number": "997", "verification": "official", "sources": ["sa-cst", "sa-spa-997"] },
+        {
+          "types": ["fire"],
+          "number": "998",
+          "verification": "official",
+          "sources": ["sa-cst", "sa-spa-998"],
+          "note": {
+            "en": "Outside the four 911 regions; in them, Civil Defense asks you to call 911.",
+            "ar": "خارج مناطق ٩١١ الأربع؛ وفيها يطلب الدفاع المدني الاتصال بـ ٩١١."
+          }
+        },
+        { "types": ["traffic"], "number": "993", "verification": "official", "sources": ["sa-cst"] },
+        { "types": ["roadSecurity"], "number": "996", "verification": "official", "sources": ["sa-cst"] }
+      ],
+      "sources": [
+        {
+          "id": "sa-cst",
+          "publisher": {
+            "en": "Communications, Space & Technology Commission: National Numbering Plan",
+            "ar": "هيئة الاتصالات والفضاء والتقنية: الخطة الوطنية للترقيم"
+          },
+          "url": "https://www.cst.gov.sa/en/about/Numbering"
+        },
+        {
+          "id": "sa-spa-911",
+          "publisher": { "en": "Saudi Press Agency, 1 March 2026", "ar": "وكالة الأنباء السعودية، ١ مارس ٢٠٢٦" },
+          "url": "https://www.spa.gov.sa/en/N2525906"
+        },
+        {
+          "id": "sa-spa-998",
+          "publisher": { "en": "Saudi Press Agency (Civil Defense), 18 February 2026", "ar": "وكالة الأنباء السعودية (الدفاع المدني)، ١٨ فبراير ٢٠٢٦" },
+          "url": "https://www.spa.gov.sa/en/N2517952"
+        },
+        {
+          "id": "sa-spa-997",
+          "publisher": { "en": "Saudi Press Agency (Saudi Red Crescent), 7 April 2026", "ar": "وكالة الأنباء السعودية (هيئة الهلال الأحمر)، ٧ أبريل ٢٠٢٦" },
+          "url": "https://spa.gov.sa/en/N2554935"
+        }
+      ]
+    },
+    {
+      "code": "AE",
+      "checkedOn": "2026-11-03",
+      "note": {
+        "en": "These numbers work in every emirate.",
+        "ar": "تعمل هذه الأرقام في جميع الإمارات."
+      },
+      "services": [
+        { "types": ["police"], "number": "999", "verification": "official", "sources": ["ae-portal"] },
+        { "types": ["ambulance"], "number": "998", "verification": "official", "sources": ["ae-portal"] },
+        { "types": ["fire"], "number": "997", "verification": "official", "sources": ["ae-portal"] }
+      ],
+      "sources": [
+        {
+          "id": "ae-portal",
+          "publisher": { "en": "UAE Government portal (u.ae): Handling emergencies", "ar": "البوابة الرسمية لحكومة الإمارات (u.ae): التعامل مع حالات الطوارئ" },
+          "url": "https://u.ae/en/information-and-services/justice-safety-and-the-law/Safety/handling-emergencies"
+        }
+      ]
+    },
+    {
+      "code": "KW",
+      "checkedOn": "2026-11-03",
+      "services": [
+        { "types": ["police", "ambulance", "fire"], "number": "112", "verification": "official", "sources": ["kw-moi"] }
+      ],
+      "sources": [
+        {
+          "id": "kw-moi",
+          "publisher": { "en": "Kuwait Ministry of Interior", "ar": "وزارة الداخلية الكويتية" },
+          "url": "https://www.moi.gov.kw/main?culture=en"
+        }
+      ]
+    },
+    {
+      "code": "QA",
+      "checkedOn": "2026-11-03",
+      "services": [
+        { "types": ["police", "ambulance", "fire"], "number": "999", "verification": "official", "sources": ["qa-moi", "qa-hmc"] }
+      ],
+      "sources": [
+        {
+          "id": "qa-moi",
+          "publisher": { "en": "Qatar Ministry of Interior: emergency contacts", "ar": "وزارة الداخلية القطرية: أرقام الطوارئ" },
+          "url": "https://portal.moi.gov.qa/wps/portal/MOIInternet"
+        },
+        {
+          "id": "qa-hmc",
+          "publisher": { "en": "Hamad Medical Corporation: Ambulance Service", "ar": "مؤسسة حمد الطبية: خدمة الإسعاف" },
+          "url": "https://www.hamad.qa/EN/Hospitals-and-services/Ambulance-Service/Pages/default.aspx"
+        }
+      ]
+    },
+    {
+      "code": "BH",
+      "checkedOn": "2026-11-03",
+      "services": [
+        { "types": ["police", "ambulance", "fire"], "number": "999", "verification": "official", "sources": ["bh-portal"] },
+        { "types": ["traffic"], "number": "199", "verification": "official", "sources": ["bh-portal"] }
+      ],
+      "sources": [
+        {
+          "id": "bh-portal",
+          "publisher": { "en": "Bahrain National Portal: Directory of Emergency Hotline Numbers", "ar": "البوابة الوطنية لمملكة البحرين: دليل أرقام الطوارئ" },
+          "url": "https://www.bahrain.bh/wps/portal/en/BNP/DirectoryOfEmergencyHotlineNumbers"
+        }
+      ]
+    },
+    {
+      "code": "OM",
+      "checkedOn": "2026-11-03",
+      "services": [
+        { "types": ["police", "ambulance", "fire"], "number": "9999", "verification": "official", "sources": ["om-rop", "om-portal", "om-cdaa"] }
+      ],
+      "sources": [
+        {
+          "id": "om-rop",
+          "publisher": { "en": "Royal Oman Police", "ar": "شرطة عُمان السلطانية" },
+          "url": "https://www.rop.gov.om/english/contactus.aspx"
+        },
+        {
+          "id": "om-portal",
+          "publisher": { "en": "Oman Government portal (gov.om): emergency numbers", "ar": "البوابة الحكومية لسلطنة عُمان: أرقام الطوارئ" },
+          "url": "https://gov.om/en/emergency-numbers1"
+        },
+        {
+          "id": "om-cdaa",
+          "publisher": { "en": "Civil Defence and Ambulance Authority", "ar": "هيئة الدفاع المدني والإسعاف" },
+          "url": "https://cdaa.gov.om/?p=4008"
+        }
+      ]
+    },
+    {
+      "code": "EG",
+      "checkedOn": "2026-11-03",
+      "services": [
+        { "types": ["police"], "number": "122", "verification": "official", "sources": ["eg-moi"] },
+        { "types": ["ambulance"], "number": "123", "verification": "official", "sources": ["eg-sis"] },
+        { "types": ["fire"], "number": "180", "verification": "official", "sources": ["eg-moi"] },
+        {
+          "types": ["traffic"],
+          "number": "01221110000",
+          "verification": "official",
+          "sources": ["eg-moi"],
+          "note": { "en": "A mobile number, not a short code.", "ar": "رقم هاتف محمول، وليس رقمًا مختصرًا." }
+        }
+      ],
+      "sources": [
+        {
+          "id": "eg-moi",
+          "publisher": { "en": "Egyptian Ministry of Interior: public service numbers", "ar": "وزارة الداخلية المصرية: أرقام الخدمات الجماهيرية" },
+          "url": "https://www.moi.gov.eg/home/EmergancyNumber"
+        },
+        {
+          "id": "eg-sis",
+          "publisher": { "en": "State Information Service (Egyptian Ambulance Organization), 24 May 2025", "ar": "الهيئة العامة للاستعلامات (هيئة الإسعاف المصرية)، ٢٤ مايو ٢٠٢٥" },
+          "url": "https://sis.gov.eg/en/media-center/news/pm-inaugurates-new-hq-of-egyptian-ambulance-organization/"
+        }
+      ]
+    }
+  ]
+}

@@ -13,15 +13,20 @@ import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/states/journey_state.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/escalation_status.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_actions.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_facts.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_incident.dart';
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_notices.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_route_card.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_tracking.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/safety_notice_note.dart';
 import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
 
-/// One journey: its places, status and dates, and — while it is planned —
-/// the user's own two endings. Nothing changes the status but the user.
+/// One journey: its places, status and dates, and — while it is open — what
+/// the user can do next: start it through the pre-journey checklist, or end
+/// it. Nothing changes the status but the user.
 class JourneyPage extends StatelessWidget {
   const JourneyPage({required this.id, super.key});
 
@@ -42,7 +47,7 @@ class _JourneyView extends StatelessWidget {
       before is JourneyReady &&
       before.busy &&
       now is JourneyReady &&
-      now.journey.status != JourneyStatus.planned;
+      now.journey.status != before.journey.status;
 
   void _onState(BuildContext context, JourneyState state) {
     if (state is JourneyFailed && state.journey != null) {
@@ -70,56 +75,75 @@ class _JourneyView extends StatelessWidget {
         };
         return Scaffold(
           body: SafeArea(
-            child: ListView(
+            // Built in full, not lazily: a short page whose actions sit
+            // below the recording card.
+            child: SingleChildScrollView(
               padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.screenSide,
                 AppSpacing.screenTop,
                 AppSpacing.screenSide,
                 24.fx,
               ),
-              children: <Widget>[
-                TitleBar(title: context.tr('journeys.detail.title')),
-                Gap(24.fx),
-                if (journey != null) ...<Widget>[
-                  JourneyRouteCard(
-                    fromLabel: context.tr('journeys.from'),
-                    from: journey.origin,
-                    toLabel: context.tr('journeys.to'),
-                    to: journey.destination,
-                    trailing: JourneyFacts(journey: journey),
-                  ),
-                  Gap(20.fx),
-                  InfoNote(text: context.tr('journeys.notTracked')),
-                  Gap(28.fx),
-                  if (journey.status == JourneyStatus.planned)
-                    JourneyActions(
-                      busy: state is JourneyReady && state.busy,
-                      onEdit: () => context.pushNamed(
-                        AppRoutes.editJourney,
-                        pathParameters: <String, String>{'id': journey.id},
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  TitleBar(title: context.tr('journeys.detail.title')),
+                  Gap(24.fx),
+                  if (journey != null) ...<Widget>[
+                    JourneyRouteCard(
+                      fromLabel: context.tr('journeys.from'),
+                      from: journey.origin,
+                      toLabel: context.tr('journeys.to'),
+                      to: journey.destination,
+                      trailing: JourneyFacts(journey: journey),
+                    ),
+                    Gap(20.fx),
+                    if (journey.status == JourneyStatus.active) ...<Widget>[
+                      JourneyIncident(journeyId: journey.id),
+                      const SafetyNoticeNote(),
+                    ],
+                    if (journey.status != JourneyStatus.planned) ...<Widget>[
+                      EscalationStatus(journeyId: journey.id),
+                      JourneyTracking(journey: journey),
+                      Gap(20.fx),
+                    ],
+                    InfoNote(text: context.tr('journeys.notTracked')),
+                    Gap(28.fx),
+                    if (journey.status.isOpen)
+                      JourneyActions(
+                        status: journey.status,
+                        busy: state is JourneyReady && state.busy,
+                        onStart: () => context.pushNamed(
+                          AppRoutes.startJourney,
+                          pathParameters: <String, String>{'id': journey.id},
+                        ),
+                        onEdit: () => context.pushNamed(
+                          AppRoutes.editJourney,
+                          pathParameters: <String, String>{'id': journey.id},
+                        ),
+                      )
+                    else
+                      Text(
+                        context.tr('journeys.detail.settled'),
+                        textAlign: TextAlign.center,
+                        style: context.texts.bodySmall?.copyWith(
+                          color: context.appColors.textMuted,
+                        ),
                       ),
-                    )
+                  ] else if (state is JourneyLoading)
+                    const Center(child: CircularProgressIndicator())
                   else
-                    Text(
-                      context.tr('journeys.detail.settled'),
-                      textAlign: TextAlign.center,
-                      style: context.texts.bodySmall?.copyWith(
-                        color: context.appColors.textMuted,
+                    AppEmptyState(
+                      icon: Icons.search_off_rounded,
+                      title: context.tr('journeys.detail.missingTitle'),
+                      body: context.tr(
+                        state is JourneyMissing
+                            ? 'journeys.detail.missingBody'
+                            : 'journeys.failed.body',
                       ),
                     ),
-                ] else if (state is JourneyLoading)
-                  const Center(child: CircularProgressIndicator())
-                else
-                  AppEmptyState(
-                    icon: Icons.search_off_rounded,
-                    title: context.tr('journeys.detail.missingTitle'),
-                    body: context.tr(
-                      state is JourneyMissing
-                          ? 'journeys.detail.missingBody'
-                          : 'journeys.failed.body',
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         );

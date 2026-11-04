@@ -17,8 +17,8 @@ import 'package:safe_ride/features/authentication/presentation/widgets/register_
 import 'package:safe_ride/features/authentication/presentation/widgets/register_footer.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 
-/// Create a demo account — saved on this phone only, and the page says so.
-/// A taken email shows under the email field; what was typed stays. While
+/// Create a Firebase account, with its profile in Firestore; the page says
+/// the account is kept online. A taken email shows under the email field; what was typed stays. While
 /// it runs the form is locked and the button busy, so it cannot submit
 /// twice. Success signs in and goes home with a notification.
 class RegisterPage extends StatelessWidget {
@@ -76,6 +76,7 @@ class _RegisterViewState extends State<_RegisterView> {
       email: _email.text,
       phone: _phone.text,
       password: _password.text,
+      languageCode: context.locale.languageCode,
     );
   }
 

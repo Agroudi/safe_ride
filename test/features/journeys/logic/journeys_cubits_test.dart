@@ -7,8 +7,10 @@ import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/journey_start_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/states/journey_start_state.dart';
 import 'package:safe_ride/features/journeys/logic/states/journey_state.dart';
 import 'package:safe_ride/features/journeys/logic/states/journeys_state.dart';
 import 'package:safe_ride/features/journeys/logic/states/plan_journey_state.dart';
@@ -21,6 +23,7 @@ JourneyModel _journey(
   origin: 'Home',
   destination: 'Work',
   status: status,
+  departsAt: DateTime.utc(2026, 2),
   createdAt: DateTime.utc(2026),
   updatedAt: DateTime.utc(2026),
 );
@@ -50,6 +53,8 @@ class _Repository extends Fake implements JourneyRepository {
   JourneyFailure? failure;
   Completer<void>? gate;
   int plans = 0;
+  int starts = 0;
+  bool synced = true;
 
   Future<void> _maybe() async {
     final Completer<void>? wait = gate;
@@ -85,6 +90,21 @@ class _Repository extends Fake implements JourneyRepository {
     all.insert(0, j);
     _changes.add(null);
     return j;
+  }
+
+  @override
+  Future<({JourneyModel journey, bool synced})> start(
+    String id, {
+    required int checklistVersion,
+    required Set<String> confirmed,
+  }) async {
+    starts++;
+    await _maybe();
+    final JourneyModel started = all
+        .firstWhere((JourneyModel j) => j.id == id)
+        .copyWith(status: JourneyStatus.active);
+    all[all.indexWhere((JourneyModel j) => j.id == id)] = started;
+    return (journey: started, synced: synced);
   }
 
   @override
@@ -214,5 +234,134 @@ void main() {
       JourneyFailed(JourneyFailureCode.storage, journey: _journey('a')),
     );
     await cubit.close();
+  });
+
+  group('JourneyStartCubit', () {
+    final List<String> items = JourneyStartCubit.items;
+
+    Future<(JourneyStartCubit, _Repository)> open([
+      JourneyStatus status = JourneyStatus.planned,
+    ]) async {
+      final _Repository repository = _Repository()
+        ..all.add(_journey('a', status));
+      final JourneyStartCubit cubit = JourneyStartCubit(repository);
+      addTearDown(cubit.close);
+      await cubit.load('a');
+      return (cubit, repository);
+    }
+
+    Set<String> confirmed(JourneyStartCubit cubit) => switch (cubit.state) {
+      JourneyStartFilling(:final Set<String> confirmed) ||
+      JourneyStartFailed(:final Set<String> confirmed) => confirmed,
+      _ => throw StateError('no checklist: ${cubit.state}'),
+    };
+
+    test('every item starts unconfirmed, and toggles', () async {
+      final (JourneyStartCubit cubit, _) = await open();
+      expect(items, hasLength(9));
+      expect(confirmed(cubit), isEmpty);
+
+      cubit.toggle(items.first);
+      expect(confirmed(cubit), <String>{items.first});
+      cubit.toggle(items.first);
+      expect(confirmed(cubit), isEmpty);
+      cubit.toggle('notAnItem');
+      expect(confirmed(cubit), isEmpty);
+    });
+
+    test('an incomplete checklist starts nothing', () async {
+      final (JourneyStartCubit cubit, _Repository repository) = await open();
+      items.skip(1).forEach(cubit.toggle);
+
+      await cubit.start();
+      expect(repository.starts, 0);
+      expect(cubit.state, isA<JourneyStartFilling>());
+    });
+
+    test('one start, however many taps; nothing changes meanwhile', () async {
+      final (JourneyStartCubit cubit, _Repository repository) = await open();
+      items.forEach(cubit.toggle);
+      repository.gate = Completer<void>();
+
+      final Future<void> first = cubit.start();
+      await cubit.start();
+      cubit.toggle(items.first);
+      expect(
+        cubit.state,
+        isA<JourneyStartFilling>()
+            .having((JourneyStartFilling s) => s.starting, 'starting', isTrue)
+            .having(
+              (JourneyStartFilling s) => s.confirmed,
+              'confirmed',
+              items.toSet(),
+            ),
+      );
+      repository.gate!.complete();
+      await first;
+      await cubit.start();
+
+      expect(repository.starts, 1);
+      expect(
+        cubit.state,
+        isA<JourneyStartStarted>().having(
+          (JourneyStartStarted s) => s.synced,
+          'synced',
+          isTrue,
+        ),
+      );
+    });
+
+    test('saved only on the phone, it says so', () async {
+      final (JourneyStartCubit cubit, _Repository repository) = await open();
+      repository.synced = false;
+      items.forEach(cubit.toggle);
+      await cubit.start();
+      expect((cubit.state as JourneyStartStarted).synced, isFalse);
+    });
+
+    test('a failed start keeps the answers for a retry', () async {
+      final (JourneyStartCubit cubit, _Repository repository) = await open();
+      items.forEach(cubit.toggle);
+      repository.failure = const JourneyFailure(JourneyFailureCode.network);
+
+      await cubit.start();
+      expect(cubit.state, isA<JourneyStartFailed>());
+      expect(confirmed(cubit), items.toSet());
+
+      repository.failure = null;
+      await cubit.start();
+      expect(cubit.state, isA<JourneyStartStarted>());
+    });
+
+    test('started elsewhere meanwhile, this checklist is over', () async {
+      final (JourneyStartCubit cubit, _Repository repository) = await open();
+      items.forEach(cubit.toggle);
+      repository.failure = const JourneyFailure(
+        JourneyFailureCode.alreadyStarted,
+      );
+      await cubit.start();
+      expect(
+        cubit.state,
+        const JourneyStartUnavailable(JourneyFailureCode.alreadyStarted),
+      );
+    });
+
+    test('only a planned journey gets a checklist', () async {
+      expect(
+        (await open(JourneyStatus.active)).$1.state,
+        const JourneyStartUnavailable(JourneyFailureCode.alreadyStarted),
+      );
+      expect(
+        (await open(JourneyStatus.completed)).$1.state,
+        const JourneyStartUnavailable(JourneyFailureCode.notPlanned),
+      );
+      final JourneyStartCubit missing = JourneyStartCubit(_Repository());
+      addTearDown(missing.close);
+      await missing.load('nope');
+      expect(
+        missing.state,
+        const JourneyStartUnavailable(JourneyFailureCode.notFound),
+      );
+    });
   });
 }

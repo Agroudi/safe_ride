@@ -42,7 +42,14 @@ class JourneySafetyPage extends StatelessWidget {
               icon: Icons.check_circle_outline_rounded,
               color: context.appColors.accentText,
               points: <String>[
-                for (final String k in <String>['plan', 'review', 'status'])
+                for (final String k in <String>[
+                  'plan',
+                  'review',
+                  'checklist',
+                  'route',
+                  'check',
+                  'status',
+                ])
                   context.tr('safety.journeys.can.$k'),
               ],
             ),
@@ -52,11 +59,7 @@ class JourneySafetyPage extends StatelessWidget {
               icon: Icons.remove_circle_outline_rounded,
               color: context.appColors.textMuted,
               points: <String>[
-                for (final String k in <String>[
-                  'tracking',
-                  'sharing',
-                  'alerts',
-                ])
+                for (final String k in <String>['sharing', 'alerts'])
                   context.tr('safety.journeys.cannot.$k'),
               ],
             ),

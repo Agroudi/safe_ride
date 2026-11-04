@@ -14,6 +14,7 @@ abstract final class JourneyLabels {
   /// quiet. The chip always carries the word too — never colour alone.
   static Color tone(AppColors colors, JourneyStatus status) => switch (status) {
     JourneyStatus.planned => colors.info,
+    JourneyStatus.active => colors.secondary,
     JourneyStatus.completed => colors.success,
     JourneyStatus.cancelled => colors.textMuted,
   };
@@ -21,11 +22,6 @@ abstract final class JourneyLabels {
   /// Local time, in the locale's digits (`LocaleNumbers.dateTime`).
   static String date(BuildContext context, DateTime utc) =>
       LocaleNumbers.dateTime(context.locale.languageCode).format(utc.toLocal());
-
-  /// When the journey leaves, or "departure not set" for one stored before
-  /// departures existed — never a guess.
-  static String departure(BuildContext context, DateTime? utc) =>
-      utc == null ? context.tr('journeys.departureNotSet') : date(context, utc);
 
   /// A place typed by the user, in a first-strong isolate (U+2068 … U+2069):
   /// a Latin address inside an Arabic sentence, or the reverse, keeps its

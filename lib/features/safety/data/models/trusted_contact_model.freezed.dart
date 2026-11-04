@@ -16,8 +16,8 @@ T _$identity<T>(T value) => value;
 mixin _$TrustedContactModel {
 
  String get id; String get fullName;/// As typed; compared by its digits only.
- String get phone;/// UTC.
- DateTime get createdAt;/// "Sister", "Friend" — optional, the user's own word.
+ String get phone;/// UTC; set by the server when the contact is saved.
+@TimestampConverter() DateTime get createdAt;/// "Sister", "Friend" — optional, the user's own word.
  String? get relationship;
 /// Create a copy of TrustedContactModel
 /// with the given fields replaced by the non-null parameter values.
@@ -51,7 +51,7 @@ abstract mixin class $TrustedContactModelCopyWith<$Res>  {
   factory $TrustedContactModelCopyWith(TrustedContactModel value, $Res Function(TrustedContactModel) _then) = _$TrustedContactModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String fullName, String phone, DateTime createdAt, String? relationship
+ String id, String fullName, String phone,@TimestampConverter() DateTime createdAt, String? relationship
 });
 
 
@@ -160,7 +160,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String fullName,  String phone,  DateTime createdAt,  String? relationship)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String fullName,  String phone, @TimestampConverter()  DateTime createdAt,  String? relationship)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TrustedContactModel() when $default != null:
 return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relationship);case _:
@@ -181,7 +181,7 @@ return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relati
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String fullName,  String phone,  DateTime createdAt,  String? relationship)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String fullName,  String phone, @TimestampConverter()  DateTime createdAt,  String? relationship)  $default,) {final _that = this;
 switch (_that) {
 case _TrustedContactModel():
 return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relationship);case _:
@@ -201,7 +201,7 @@ return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relati
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String fullName,  String phone,  DateTime createdAt,  String? relationship)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String fullName,  String phone, @TimestampConverter()  DateTime createdAt,  String? relationship)?  $default,) {final _that = this;
 switch (_that) {
 case _TrustedContactModel() when $default != null:
 return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relationship);case _:
@@ -216,15 +216,15 @@ return $default(_that.id,_that.fullName,_that.phone,_that.createdAt,_that.relati
 @JsonSerializable()
 
 class _TrustedContactModel implements TrustedContactModel {
-  const _TrustedContactModel({required this.id, required this.fullName, required this.phone, required this.createdAt, this.relationship});
+  const _TrustedContactModel({required this.id, required this.fullName, required this.phone, @TimestampConverter() required this.createdAt, this.relationship});
   factory _TrustedContactModel.fromJson(Map<String, dynamic> json) => _$TrustedContactModelFromJson(json);
 
 @override final  String id;
 @override final  String fullName;
 /// As typed; compared by its digits only.
 @override final  String phone;
-/// UTC.
-@override final  DateTime createdAt;
+/// UTC; set by the server when the contact is saved.
+@override@TimestampConverter() final  DateTime createdAt;
 /// "Sister", "Friend" — optional, the user's own word.
 @override final  String? relationship;
 
@@ -261,7 +261,7 @@ abstract mixin class _$TrustedContactModelCopyWith<$Res> implements $TrustedCont
   factory _$TrustedContactModelCopyWith(_TrustedContactModel value, $Res Function(_TrustedContactModel) _then) = __$TrustedContactModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String fullName, String phone, DateTime createdAt, String? relationship
+ String id, String fullName, String phone,@TimestampConverter() DateTime createdAt, String? relationship
 });
 
 

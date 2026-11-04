@@ -6,8 +6,8 @@ import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/authentication/presentation/widgets/auth_link_button.dart';
 
-/// Under the register button: where the account lives (this phone only —
-/// never a claim of a server), then the way to login.
+/// Under the register button: where the account lives (online, so it follows
+/// the user to another phone), then the way to login.
 class RegisterFooter extends StatelessWidget {
   const RegisterFooter({super.key, this.onLogin});
 
@@ -21,7 +21,7 @@ class RegisterFooter extends StatelessWidget {
     return Column(
       children: <Widget>[
         Text(
-          context.tr('auth.register.deviceOnly'),
+          context.tr('auth.register.accountNote'),
           textAlign: TextAlign.center,
           style: context.texts.bodySmall?.copyWith(color: colors.textMuted),
         ),

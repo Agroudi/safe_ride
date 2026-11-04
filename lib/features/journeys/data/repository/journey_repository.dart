@@ -1,9 +1,9 @@
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 
 /// The journeys seam: home, My Journeys and the planning screens ask this,
-/// never a storage client. `LocalJourneyRepository` keeps them on the phone
-/// today; a Firebase implementation replaces it behind the same interface —
-/// one line in the service locator. Every method throws only
+/// never a storage client. `FirestoreJourneyRepository` keeps them in the
+/// account today; another backend would be one more implementation, chosen
+/// in the service locator. Every method throws only
 /// `JourneyFailure`, and works on the signed-in account's journeys.
 abstract interface class JourneyRepository {
   /// Newest first.
@@ -19,8 +19,8 @@ abstract interface class JourneyRepository {
     required DateTime departsAt,
   });
 
-  /// Changes a planned journey's places and departure. Throws `notPlanned`
-  /// once it is completed or cancelled — a closed journey is a record.
+  /// Changes a planned journey's places and departure. Throws
+  /// `alreadyStarted` once it started, `notPlanned` once it is closed.
   Future<JourneyModel> update(
     String id, {
     required String origin,
@@ -28,10 +28,23 @@ abstract interface class JourneyRepository {
     required DateTime departsAt,
   });
 
-  /// planned → completed. Throws `notPlanned` from any other status.
+  /// planned → active, only with the pre-journey checklist for
+  /// [checklistVersion] fully confirmed ([confirmed] is its item ids). The
+  /// checklist record and the status change are saved together, or not at
+  /// all. [synced] is false when the phone saved it but the server has not
+  /// confirmed it yet (offline). Throws `checklistIncomplete`,
+  /// `alreadyStarted`, `notPlanned`.
+  Future<({JourneyModel journey, bool synced})> start(
+    String id, {
+    required int checklistVersion,
+    required Set<String> confirmed,
+  });
+
+  /// active → completed. Throws `notStarted` from planned, `notPlanned` once
+  /// closed.
   Future<JourneyModel> complete(String id);
 
-  /// planned → cancelled. Throws `notPlanned` from any other status.
+  /// planned or active → cancelled. Throws `notPlanned` once closed.
   Future<JourneyModel> cancel(String id);
 
   /// Fires after every change made through this repository, so open screens

@@ -22,6 +22,7 @@ class Validators {
   static const int fullNameMax = 200;
   static const int placeMax = 120;
   static const int relationshipMax = 40;
+  static const int phoneMinDigits = 7;
 
   static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$');
   static final RegExp _phone = RegExp(r'^\+?[0-9][0-9\s\-()]{6,19}$');
@@ -52,7 +53,11 @@ class Validators {
   String? phone(String? value) {
     final String entry = (value ?? '').trim();
     if (entry.isEmpty) return null;
-    return _phone.hasMatch(entry) ? null : 'validation.phone'.tr();
+    // Punctuation does not count: the rules want seven real digits.
+    final int digits = entry.replaceAll(RegExp(r'\D'), '').length;
+    return _phone.hasMatch(entry) && digits >= phoneMinDigits
+        ? null
+        : 'validation.phone'.tr();
   }
 
   /// 8–128 characters, at least one digit and one uppercase letter, checked in

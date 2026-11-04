@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/notifications/app_notifier.dart';
@@ -13,13 +14,15 @@ import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/safety/data/models/contact_failure.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_form_cubit.dart';
 import 'package:safe_ride/features/safety/logic/states/contact_form_state.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/contact_alerts_card.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/contact_fields.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/contact_form_actions.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/safety_notices.dart';
 
 /// Add a trusted contact ([id] null) or edit one — and delete it, after a
 /// confirmation. A taken number shows under the phone field; what was typed
-/// stays. A missing contact says so.
+/// stays. A missing contact says so; one that cannot be read offers a retry
+/// and never an empty form whose Save would add a second contact.
 class ContactFormPage extends StatelessWidget {
   const ContactFormPage({this.id, super.key});
 
@@ -33,14 +36,16 @@ class ContactFormPage extends StatelessWidget {
       if (editing != null) cubit.load(editing);
       return cubit;
     },
-    child: _ContactFormView(editing: id != null),
+    child: _ContactFormView(id: id),
   );
 }
 
 class _ContactFormView extends StatefulWidget {
-  const _ContactFormView({required this.editing});
+  const _ContactFormView({required this.id});
 
-  final bool editing;
+  final String? id;
+
+  bool get editing => id != null;
 
   @override
   State<_ContactFormView> createState() => _ContactFormViewState();
@@ -54,6 +59,7 @@ class _ContactFormViewState extends State<_ContactFormView> {
   AutovalidateMode _mode = AutovalidateMode.disabled;
   String? _phoneError;
   bool _filled = false;
+  String? _savedPhone;
 
   @override
   void dispose() {
@@ -67,6 +73,7 @@ class _ContactFormViewState extends State<_ContactFormView> {
     switch (state) {
       case ContactFormReady(:final contact?) when !_filled:
         _filled = true;
+        _savedPhone = contact.phone;
         _name.text = contact.fullName;
         _phone.text = contact.phone;
         _relationship.text = contact.relationship ?? '';
@@ -150,6 +157,14 @@ class _ContactFormViewState extends State<_ContactFormView> {
                 title: context.tr('safety.contacts.errors.notFound'),
                 body: context.tr('safety.contacts.notice'),
               )
+            else if (state is ContactFormUnreadable)
+              AppEmptyState(
+                icon: Icons.error_outline_rounded,
+                title: context.tr('safety.contacts.form.unreadable.title'),
+                body: context.tr('safety.contacts.form.unreadable.body'),
+                actionLabel: context.tr('safety.contacts.failed.retry'),
+                onAction: context.read<ContactFormCubit>().retry,
+              )
             else ...<Widget>[
               ContactFields(
                 name: _name,
@@ -168,6 +183,11 @@ class _ContactFormViewState extends State<_ContactFormView> {
                 onSave: _save,
                 onDelete: widget.editing ? _delete : null,
               ),
+              if (_savedPhone case final String phone
+                  when AppFeatures.contactAlerts) ...<Widget>[
+                Gap(24.fx),
+                ContactAlertsCard(contactId: widget.id!, phone: phone),
+              ],
             ],
           ],
         );

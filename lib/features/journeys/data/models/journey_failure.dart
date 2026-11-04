@@ -6,11 +6,23 @@ enum JourneyFailureCode {
   /// No journey has that id (for this account).
   notFound,
 
-  /// The change does not apply to the journey's status — only a planned
-  /// journey can be completed or cancelled.
+  /// The journey is closed (completed or cancelled): it can no longer change.
   notPlanned,
 
-  /// The device's storage could not be read or written.
+  /// Only a planned journey starts or is edited, and this one already started.
+  alreadyStarted,
+
+  /// Only a started journey is marked completed.
+  notStarted,
+
+  /// The pre-journey safety checklist was not fully confirmed.
+  checklistIncomplete,
+
+  /// SafeRide's servers could not be reached, and the phone has no copy.
+  network,
+
+  /// The journey could not be read or saved (including a change the
+  /// server's rules refused).
   storage,
 }
 

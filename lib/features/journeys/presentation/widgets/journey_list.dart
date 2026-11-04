@@ -41,11 +41,11 @@ class JourneyList extends StatelessWidget {
             key: ValueKey<String>(j.id),
             origin: j.origin,
             destination: j.destination,
-            dateLabel: JourneyLabels.departure(context, j.departsAt),
+            dateLabel: JourneyLabels.date(context, j.departsAt),
             statusLabel: JourneyLabels.status(context, j.status),
             statusColor: JourneyLabels.tone(context.appColors, j.status),
             onTap: () => onOpen(j),
-            onCancel: onCancel == null || j.status != JourneyStatus.planned
+            onCancel: onCancel == null || !j.status.isOpen
                 ? null
                 : () => onCancel!(j),
             cancelLabel: context.tr('journeys.detail.cancel'),

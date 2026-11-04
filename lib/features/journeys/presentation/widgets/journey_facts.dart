@@ -8,7 +8,8 @@ import 'package:safe_ride/features/journeys/presentation/widgets/journey_labels.
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_status_chip.dart';
 
 /// Under a journey's places: its departure, its status, when it was
-/// planned, and when it last changed (only when it has).
+/// planned, when it started (once it has), and when it last changed (only
+/// when it has).
 class JourneyFacts extends StatelessWidget {
   const JourneyFacts({required this.journey, super.key});
 
@@ -35,6 +36,12 @@ class JourneyFacts extends StatelessWidget {
           '${JourneyLabels.date(context, journey.createdAt)}',
           style: quiet,
         ),
+        if (journey.startedAt case final DateTime started)
+          Text(
+            '${context.tr('journeys.detail.started')} '
+            '${JourneyLabels.date(context, started)}',
+            style: quiet,
+          ),
         if (journey.updatedAt != journey.createdAt)
           Text(
             '${context.tr('journeys.detail.updated')} '
@@ -50,8 +57,8 @@ class JourneyFacts extends StatelessWidget {
 class JourneyDeparture extends StatelessWidget {
   const JourneyDeparture({required this.departsAt, super.key});
 
-  /// UTC; null on a journey stored before departures existed.
-  final DateTime? departsAt;
+  /// UTC.
+  final DateTime departsAt;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +83,7 @@ class JourneyDeparture extends StatelessWidget {
                 ),
                 Gap(2.fx),
                 Text(
-                  JourneyLabels.departure(context, departsAt),
+                  JourneyLabels.date(context, departsAt),
                   style: context.texts.titleSmall?.copyWith(
                     color: context.appColors.text,
                   ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/push/push_notifications.dart';
 import 'package:safe_ride/features/authentication/data/models/auth_failure.dart';
 import 'package:safe_ride/features/authentication/data/models/user_model.dart';
 import 'package:safe_ride/features/authentication/data/repository/auth_repository.dart';
@@ -47,6 +48,7 @@ class _Repository extends Fake implements AuthRepository {
     required String fullName,
     required String email,
     required String password,
+    required String languageCode,
     String? phone,
   }) => _answer();
 
@@ -78,6 +80,14 @@ class _Repository extends Fake implements AuthRepository {
   }
 }
 
+/// Counts what signing out asks of push.
+class _Device implements DeviceRegistration {
+  int unregisters = 0;
+
+  @override
+  Future<void> unregister() async => unregisters++;
+}
+
 void main() {
   group('AuthCubit', () {
     test('login: submitting, then succeeded with the user', () async {
@@ -95,12 +105,12 @@ void main() {
 
     test('a failure is reported by code', () async {
       final _Repository repository = _Repository()
-        ..failure = const AuthFailure(AuthFailureCode.wrongPassword);
+        ..failure = const AuthFailure(AuthFailureCode.invalidCredentials);
       final AuthCubit cubit = AuthCubit(repository);
 
       await cubit.login(email: 'sara@example.com', password: 'nope');
 
-      expect(cubit.state, const AuthFailed(AuthFailureCode.wrongPassword));
+      expect(cubit.state, const AuthFailed(AuthFailureCode.invalidCredentials));
       await cubit.close();
     });
 
@@ -113,11 +123,13 @@ void main() {
         fullName: 'Sara Ahmed',
         email: 'sara@example.com',
         password: 'Secret123',
+        languageCode: 'en',
       );
       await cubit.register(
         fullName: 'Sara Ahmed',
         email: 'sara@example.com',
         password: 'Secret123',
+        languageCode: 'en',
       );
       expect(repository.calls, 1);
 
@@ -143,15 +155,21 @@ void main() {
   });
 
   group('AccountCubit', () {
+    late _Device device;
+    setUp(() => device = _Device());
+
     test('loads the signed-in user', () async {
-      final AccountCubit cubit = AccountCubit(_Repository());
+      final AccountCubit cubit = AccountCubit(_Repository(), device);
       await cubit.load();
       expect(cubit.state, AccountReady(_sara));
       await cubit.close();
     });
 
     test('nobody signed in reads as signed out', () async {
-      final AccountCubit cubit = AccountCubit(_Repository()..user = null);
+      final AccountCubit cubit = AccountCubit(
+        _Repository()..user = null,
+        device,
+      );
       await cubit.load();
       expect(cubit.state, const AccountSignedOut());
       await cubit.close();
@@ -159,7 +177,7 @@ void main() {
 
     test('sign-out: busy, then signed out', () async {
       final _Repository repository = _Repository();
-      final AccountCubit cubit = AccountCubit(repository);
+      final AccountCubit cubit = AccountCubit(repository, device);
       await cubit.load();
       final Future<List<AccountState>> states = cubit.stream.take(2).toList();
 
@@ -170,12 +188,14 @@ void main() {
         const AccountSignedOut(),
       ]);
       expect(repository.logouts, 1);
+      // This install's push record goes first, while still signed in.
+      expect(device.unregisters, 1);
       await cubit.close();
     });
 
     test('a failed sign-out keeps the user on screen', () async {
       final _Repository repository = _Repository();
-      final AccountCubit cubit = AccountCubit(repository);
+      final AccountCubit cubit = AccountCubit(repository, device);
       await cubit.load();
       repository.failure = const AuthFailure(AuthFailureCode.storage);
 
@@ -187,7 +207,7 @@ void main() {
 
     test('a saved profile edit reloads the account', () async {
       final _Repository repository = _Repository();
-      final AccountCubit cubit = AccountCubit(repository);
+      final AccountCubit cubit = AccountCubit(repository, device);
       await cubit.load();
       final Future<AccountState> next = cubit.stream.first;
 
@@ -205,7 +225,7 @@ void main() {
 
     test('a failed profile edit returns its code', () async {
       final _Repository repository = _Repository();
-      final AccountCubit cubit = AccountCubit(repository);
+      final AccountCubit cubit = AccountCubit(repository, device);
       await cubit.load();
       repository.failure = const AuthFailure(AuthFailureCode.storage);
 

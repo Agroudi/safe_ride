@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gap/gap.dart';
-import 'package:safe_ride/core/constants/app_assets.dart';
 import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
+import 'package:safe_ride/core/shared_widgets/password_eye.dart';
 
 /// A label stacked over a validated text field — every form in the app.
 ///
@@ -115,7 +114,7 @@ class _AppTextFieldState extends State<AppTextField> {
             errorMaxLines: 3,
             suffixIconConstraints: const BoxConstraints(),
             suffixIcon: widget.obscurable
-                ? _PasswordEye(
+                ? PasswordEye(
                     obscured: _obscured,
                     onPressed: () => setState(() => _obscured = !_obscured),
                   )
@@ -123,36 +122,6 @@ class _AppTextFieldState extends State<AppTextField> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// The eye at the end edge of a password field. The design only draws the
-/// hidden state, so the revealed one falls back to the Material glyph.
-class _PasswordEye extends StatelessWidget {
-  const _PasswordEye({required this.obscured, required this.onPressed});
-
-  final bool obscured;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color tone = context.appColors.textMuted;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onPressed,
-      child: Padding(
-        padding: EdgeInsetsDirectional.only(start: 10.fx, end: 16.fx),
-        child: obscured
-            ? SvgPicture.asset(
-                AppAssets.eyeOff,
-                width: 21.fx,
-                height: 19.fx,
-                colorFilter: ColorFilter.mode(tone, BlendMode.srcIn),
-              )
-            : Icon(Icons.visibility_outlined, size: 21.fx, color: tone),
-      ),
     );
   }
 }

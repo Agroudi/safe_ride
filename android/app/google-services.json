@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "189329732062",
+    "project_id": "saferide-a9d9f",
+    "storage_bucket": "saferide-a9d9f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189329732062:android:17ce62169424127a592d4f",
+        "android_client_info": {
+          "package_name": "com.saferide.falcon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoQT7Cy-qvSNM5RF76YJxoabZPjuoA8CM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -30,7 +30,7 @@
       "three": {
         "eyebrow": "ONE PLACE",
         "title": "Peace of Mind, Every Ride",
-        "body": "Trusted contacts, ride-safety advice and emergency numbers, together in the Safety tab and kept on this phone."
+        "body": "Trusted contacts, ride-safety advice and emergency numbers, together in the Safety tab."
       }
     },
     "progress": "Step {current} of {total}"
@@ -86,40 +86,38 @@
       "emailHint": "name@example.com",
       "phoneNote": "Optional. SafeRide doesn't verify this number.",
       "passwordPolicy": "At least 8 characters, including a number and a capital letter.",
-      "deviceOnly": "In this version your account is saved on this phone only.",
       "haveAccount": "Already have an account?",
-      "login": "Log in"
+      "login": "Log in",
+      "accountNote": "Your account is kept online, so you can sign in on another phone."
     },
     "errors": {
-      "emailTaken": "An account with this email already exists on this phone.",
-      "wrongPassword": "The password is incorrect.",
-      "noAccount": {
-        "title": "Something went wrong",
-        "message": "No account exists with this email address. Check your details or create a new account.",
-        "action": "Create account"
-      },
-      "storage": {
-        "title": "Something went wrong",
-        "message": "SafeRide couldn't read or save your details on this phone. Please try again."
-      },
-      "unknown": {
-        "title": "Something went wrong",
-        "message": "Please try again."
-      }
+      "title": "Something went wrong",
+      "emailTaken": "An account with this email already exists.",
+      "invalidCredentials": "The email or password is incorrect.",
+      "invalidEmail": "This email address isn't valid.",
+      "weakPassword": "Choose a stronger password.",
+      "tooManyRequests": "Too many attempts. Wait a few minutes and try again.",
+      "network": "SafeRide couldn't connect. Check your internet connection and try again.",
+      "disabled": "This account has been switched off.",
+      "storage": "SafeRide couldn't load or save your profile. Please try again.",
+      "unknown": "Please try again."
     },
     "notices": {
       "registered": {
         "title": "Account created",
-        "message": "It's saved on this phone only. SafeRide doesn't have online accounts yet."
+        "message": "You can sign in with this email on any phone."
       },
       "signedOut": {
         "title": "You've signed out",
         "message": "Your language and appearance settings are kept."
-      },
-      "resetUnavailable": {
-        "title": "Password reset isn't available yet",
-        "message": "Accounts in this version live on this phone only, so SafeRide can't send a reset email. If you can't remember your password, create a new account with another email."
       }
+    },
+    "reset": {
+      "title": "Reset your password",
+      "subtitle": "Enter your account's email and we'll send you a link to choose a new password.",
+      "send": "Send link",
+      "sent": "If an account exists for this email, a link to reset the password is on its way. Check your inbox and your spam folder.",
+      "back": "Back to log in"
     }
   },
   "home": {
@@ -145,11 +143,11 @@
       "planned": "Planned",
       "sharing": {
         "title": "Journey Sharing",
-        "body": "Share a journey with people you trust. This needs SafeRide's online service, which isn't available yet."
+        "body": "Share a journey with people you trust. It isn't available yet."
       },
       "contacts": {
         "title": "Trusted Contacts",
-        "body": "Keep the people you trust in one place, on this phone."
+        "body": "Keep the people you trust in one place."
       },
       "resources": {
         "title": "Safety Resources",
@@ -182,7 +180,9 @@
     "place": "Enter at least 2 characters",
     "samePlace": "The destination must differ from the starting point",
     "departurePast": "Choose a time that has not passed",
-    "relationship": "At most 40 characters"
+    "relationship": "At most 40 characters",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "notifications": {
     "dismiss": "Dismiss",
@@ -192,12 +192,12 @@
       "warning": "Warning",
       "info": "Information",
       "offline": "Offline"
-    }
+    },
+    "open": "Open"
   },
   "profile": {
     "title": "Profile",
     "account": "Account",
-    "deviceOnly": "Saved on this phone only",
     "phoneUnverified": "Not verified",
     "signOut": "Sign out",
     "confirm": {
@@ -214,16 +214,43 @@
     },
     "about": {
       "title": "About SafeRide",
-      "body": "What the app is, and what it keeps on this phone."
+      "body": "What the app is, and where your information is kept."
     },
     "editPage": {
       "title": "Edit profile",
       "emailLabel": "Email",
-      "emailNote": "Your email can't be changed: it identifies your account on this phone.",
+      "emailNote": "Your email can't be changed here: it's how you sign in.",
       "save": "Save changes"
     },
     "notices": {
       "updated": "Profile updated"
+    },
+    "accountNote": "Kept in your SafeRide account",
+    "notifications": {
+      "title": "Notifications",
+      "allowed": "Allowed on this phone.",
+      "notAsked": "Tap to allow notifications on this phone.",
+      "blocked": "Turned off in your phone's settings.",
+      "howToAllow": "To allow them, open your phone's settings, then SafeRide, then Notifications."
+    },
+    "delete": {
+      "title": "Delete account",
+      "intro": "This deletes your SafeRide account for good: your profile, journeys, recorded routes, trusted contacts and safety records, in your account and on this phone. It can't be undone.",
+      "note": "You need an internet connection. Any journey in progress stops being recorded. Your language and appearance stay on this phone.",
+      "password": "Your password",
+      "submit": "Delete my account",
+      "wrongPassword": "That password isn't right.",
+      "done": "Your account was deleted.",
+      "failed": {
+        "title": "Your account wasn't fully deleted",
+        "body": "Some of its data may already be gone. Check your connection and try again."
+      },
+      "confirm": {
+        "title": "Delete your account?",
+        "message": "Everything in it is deleted. This can't be undone.",
+        "confirm": "Delete",
+        "cancel": "Keep my account"
+      }
     }
   },
   "tabs": {
@@ -232,27 +259,36 @@
     "profile": "Profile",
     "safety": "Safety"
   },
+  "country": {
+    "title": "Country you're in",
+    "notChosen": "Not chosen yet. The emergency numbers need it.",
+    "picker": {
+      "title": "Which country are you in?",
+      "body": "The emergency numbers follow the country you choose here. SafeRide doesn't guess it from your SIM card, language or location, so change it when you travel."
+    }
+  },
   "journeys": {
     "title": "My Journeys",
     "empty": {
       "title": "No journeys yet",
-      "body": "Plan your first journey and it will be kept here, on this phone.",
+      "body": "Plan your first journey and it will be kept here.",
       "action": "Start a Journey"
     },
     "failed": {
       "title": "Your journeys couldn't be loaded",
-      "body": "SafeRide couldn't read them from this phone.",
+      "body": "SafeRide couldn't load them. Check your connection and try again.",
       "retry": "Try again"
     },
     "status": {
       "planned": "Planned",
+      "active": "In progress",
       "completed": "Completed",
       "cancelled": "Cancelled"
     },
     "from": "From",
     "to": "To",
     "route": "{from} to {to}",
-    "notTracked": "SafeRide doesn't track journeys or use your location. You update a journey's status yourself.",
+    "notTracked": "SafeRide records your location only while a journey you started is in progress, and only with your permission. No one watches it and no one is alerted.",
     "plan": {
       "title": "Plan a journey",
       "fromLabel": "Starting point",
@@ -273,12 +309,14 @@
       "title": "Journey",
       "created": "Planned on",
       "updated": "Updated",
+      "started": "Started on",
       "complete": "Mark as completed",
       "cancel": "Cancel journey",
       "settled": "This journey is closed. Its status can no longer change.",
       "missingTitle": "Journey not found",
-      "missingBody": "It isn't on this phone any more.",
-      "edit": "Edit journey"
+      "missingBody": "It isn't in your account any more.",
+      "edit": "Edit journey",
+      "start": "Start journey"
     },
     "confirmComplete": {
       "title": "Mark as completed?",
@@ -295,28 +333,43 @@
     "notices": {
       "planned": {
         "title": "Journey planned",
-        "message": "It's saved on this phone. Nothing is shared or tracked."
+        "message": "It's saved. Nothing is shared."
       },
+      "started": {
+        "title": "Journey started",
+        "message": "Your checklist is saved with this journey.",
+        "offline": "Your checklist is saved on this phone and will sync when you're back online."
+      },
+      "notStarted": "The journey wasn't started. You can start it when you're ready.",
       "completed": "Journey marked as completed",
       "cancelled": "Journey cancelled",
-      "updated": "Journey updated"
+      "updated": "Journey updated",
+      "departurePassed": {
+        "title": "The departure time has passed",
+        "message": "Choose a new time for this journey."
+      }
     },
     "errors": {
       "title": "Something went wrong",
-      "storage": "SafeRide couldn't save this on the phone. Please try again.",
+      "storage": "SafeRide couldn't save this. Please try again.",
       "signedOut": "You are no longer signed in. Sign in again to continue.",
-      "notPlanned": "This journey is already closed."
+      "notPlanned": "This journey is already closed.",
+      "network": "SafeRide couldn't connect. Check your connection and try again.",
+      "alreadyStarted": "This journey has already started.",
+      "notStarted": "Start this journey before marking it as completed.",
+      "checklistIncomplete": "Confirm every point on the checklist before starting."
     },
     "departure": "Departure",
-    "departureNotSet": "Departure not set",
     "filter": {
       "label": "Show journeys",
       "all": "All",
       "planned": "Planned",
+      "active": "In progress",
       "completed": "Completed",
       "cancelled": "Cancelled",
       "empty": {
         "planned": "No planned journeys.",
+        "active": "No journeys in progress.",
         "completed": "No completed journeys yet.",
         "cancelled": "No cancelled journeys."
       }
@@ -325,12 +378,148 @@
     "edit": {
       "title": "Edit journey",
       "save": "Save changes"
+    },
+    "checklist": {
+      "title": "Before you set off",
+      "intro": "Confirm each point before this journey starts. You'll go through this checklist again for every new journey.",
+      "progress": "{done} of {total} confirmed",
+      "incomplete": "Confirm every point to start the journey.",
+      "complete": "Every point is confirmed. You're ready to start.",
+      "start": "Start journey",
+      "notNow": "Not now",
+      "note": "Starting marks the journey as in progress and, with your permission, records its route in your account. No one watches it.",
+      "unavailable": "This journey can't be started",
+      "v1": {
+        "vehicle": "The vehicle is in good condition: lights, mirrors and seatbelts work.",
+        "energy": "There is enough fuel or battery charge for the whole journey.",
+        "tiresBrakes": "The tires and brakes are checked and in good condition.",
+        "documents": "I have my driving license and the vehicle's documents with me.",
+        "fitness": "I am rested and feel physically and mentally fit to travel.",
+        "sober": "I am not under the influence of alcohol, drugs or medicine that affects driving.",
+        "phoneBattery": "My phone is charged enough for the journey.",
+        "contacts": "My trusted contacts are added in the Safety tab.",
+        "assistance": "I know where to find emergency numbers in the Safety tab."
+      }
+    },
+    "tracking": {
+      "title": "Journey recording",
+      "status": {
+        "starting": "Starting",
+        "active": "Recording",
+        "weakSignal": "Weak GPS signal",
+        "noSignal": "No GPS signal",
+        "permissionRequired": "Location needed",
+        "preciseOff": "Precise location off",
+        "locationOff": "Location off",
+        "stopped": "Stopped"
+      },
+      "speed": "Speed",
+      "speedValue": "{value} km/h",
+      "speedCurrent": "Now",
+      "speedLastKnown": "Last known",
+      "speedUnavailable": "Not available",
+      "distance": "Distance",
+      "distanceValue": "{value} km",
+      "duration": "Duration",
+      "durationHours": "{hours} h {minutes} min",
+      "durationMinutes": "{minutes} min",
+      "location": "Current location",
+      "lastLocation": "Last known location",
+      "accuracy": "within {value} m",
+      "waiting": "Waiting for the first GPS position.",
+      "sync": {
+        "queued": "Saved on this phone and sent to your account every few minutes.",
+        "synced": "Route saved to your account.",
+        "syncing": "Saving the route to your account.",
+        "pending": "Saved on this phone. It goes to your account when you're back online.",
+        "failed": "The route couldn't be saved to your account yet. SafeRide will try again."
+      },
+      "needs": {
+        "denied": {
+          "title": "Allow location to record this journey",
+          "body": "SafeRide uses your location only while this journey is in progress, to record its route, speed and distance in your account. A notice stays in your notifications while it records, and it stops when you complete or cancel the journey. No one watches it and no one is alerted.",
+          "action": "Allow location"
+        },
+        "deniedForever": {
+          "title": "Location is not allowed for SafeRide",
+          "body": "To record this journey, open SafeRide's settings, choose Location and allow it while using the app.",
+          "action": "Open settings"
+        },
+        "approximate": {
+          "title": "Precise location is off",
+          "body": "An approximate location can be kilometres off, so it can't record a route. In SafeRide's settings, turn on Precise location.",
+          "action": "Open settings"
+        },
+        "serviceOff": {
+          "title": "Your phone's location is off",
+          "body": "Turn on location in your phone's settings to record this journey.",
+          "action": "Open location settings"
+        }
+      },
+      "blocked": {
+        "permissionRequired": "Location access was turned off. Allow it again to keep recording.",
+        "preciseOff": "Turn on Precise location to keep recording.",
+        "locationOff": "Your phone's location is off. Turn it on to keep recording."
+      },
+      "elsewhere": "Another journey in progress is being recorded. SafeRide records one journey at a time.",
+      "recorded": "Recorded distance: {value} km",
+      "notRecorded": "No route was recorded for this journey.",
+      "notice": {
+        "title": "SafeRide is recording your journey",
+        "text": "Your location is recorded until you complete or cancel this journey."
+      },
+      "failed": "This journey isn't being recorded: SafeRide couldn't start. Try again."
+    },
+    "incident": {
+      "title": "SafeRide noticed unusual movement",
+      "suddenDeceleration": "Your speed dropped very quickly and you've stayed stopped. This can happen for many reasons; it isn't a confirmed accident.",
+      "prolongedStop": "You've been stopped for {minutes} min during this journey. That can be perfectly normal.",
+      "note": "Nothing has been sent to anyone.",
+      "dismiss": "I'm fine, dismiss"
+    },
+    "safetyCheck": {
+      "title": "Are you okay?",
+      "body": "SafeRide noticed unusual movement during your journey.",
+      "safe": "I'm safe",
+      "left": {
+        "one": "{count} second left",
+        "other": "{count} seconds left"
+      },
+      "explain": "If you don't answer in {seconds} seconds, SafeRide only records that you didn't answer. It can't alert your trusted contacts or call anyone, so if you need help, reach out yourself.",
+      "thanks": "Thanks. Glad you're okay.",
+      "noAnswer": {
+        "title": "No answer recorded",
+        "body": "You didn't answer in time. That doesn't mean anything happened.",
+        "close": "Close"
+      },
+      "notice": {
+        "channel": "Safety checks",
+        "channelBody": "Asks if you're okay when SafeRide notices unusual movement during a journey.",
+        "body": "SafeRide noticed unusual movement. Tap \"I'm safe\" if you're okay.",
+        "noAnswer": "You didn't answer in time. No one has been alerted.",
+        "off": "Notifications are off, so SafeRide can only ask if you're okay while it is on screen.",
+        "turnOn": "Turn on notifications"
+      }
+    },
+    "escalation": {
+      "waitingForConnection": "Your trusted contacts have not been alerted. This phone is offline, so the request is saved here and will be sent when it reconnects.",
+      "waitingForServer": "Your trusted contacts have not been alerted yet. The request reached SafeRide's server, which hasn't answered.",
+      "sending": "SafeRide is trying to alert your trusted contacts.",
+      "accepted": {
+        "one": "The notification service accepted an alert for one contact. SafeRide can't tell whether it arrived or was read.",
+        "other": "The notification service accepted alerts for {count} contacts. SafeRide can't tell whether they arrived or were read."
+      },
+      "failed": "The alert couldn't be sent to anyone.",
+      "noRecipients": "Nobody was alerted: none of your trusted contacts can receive alerts yet. Invite them from Trusted Contacts.",
+      "rejected": "Nobody was alerted. SafeRide's server didn't send this alert.",
+      "serviceUnavailable": "Your trusted contacts could not be alerted: SafeRide's alert service isn't available. Nothing was sent to anyone. The record stays on this phone. If you need help, contact someone yourself.",
+      "retry": "Try again"
     }
   },
   "safety": {
     "title": "Safety Center",
     "subtitle": "Your safety tools, in one place.",
-    "note": "SafeRide doesn't call for help, track you or contact anyone on its own.",
+    "note": "SafeRide doesn't alert your contacts, call emergency services or share your location. If you need help, contact someone yourself.",
     "entries": {
       "contacts": {
         "title": "Trusted Contacts",
@@ -346,20 +535,28 @@
       },
       "emergency": {
         "title": "Emergency Information",
-        "body": "Official emergency numbers in Saudi Arabia."
+        "body": "Official emergency numbers for the country you are in."
+      },
+      "alerts": {
+        "title": "Alerts for you",
+        "body": "From people who made you a trusted contact."
+      },
+      "invite": {
+        "title": "Enter an invite code",
+        "body": "Someone gave you a code? Become their trusted contact."
       }
     },
     "contacts": {
       "title": "Trusted Contacts",
       "add": "Add a contact",
-      "notice": "Contacts are saved on this phone only. SafeRide doesn't verify their numbers or send them anything.",
+      "notice": "Contacts are kept in your SafeRide account. SafeRide doesn't verify their numbers or send them anything.",
       "empty": {
         "title": "No trusted contacts yet",
         "body": "Add the people you would call if something went wrong."
       },
       "failed": {
         "title": "Your contacts couldn't be loaded",
-        "body": "SafeRide couldn't read them from this phone.",
+        "body": "SafeRide couldn't load them. Check your connection and try again.",
         "retry": "Try again"
       },
       "form": {
@@ -372,11 +569,15 @@
         "relationshipLabel": "Relationship (optional)",
         "relationshipHint": "Sister, friend, colleague…",
         "save": "Save contact",
-        "delete": "Delete contact"
+        "delete": "Delete contact",
+        "unreadable": {
+          "title": "This contact couldn't be loaded",
+          "body": "SafeRide couldn't load it. Nothing was changed."
+        }
       },
       "confirmDelete": {
         "title": "Delete this contact?",
-        "message": "{name} will be removed from this phone.",
+        "message": "{name} will be removed from your trusted contacts.",
         "confirm": "Delete",
         "cancel": "Keep"
       },
@@ -389,10 +590,13 @@
         "title": "Something went wrong",
         "duplicatePhone": "This number is already in your contacts.",
         "full": "You can keep up to 20 trusted contacts.",
-        "storage": "SafeRide couldn't save this on the phone. Please try again.",
+        "storage": "SafeRide couldn't save this. Please try again.",
         "signedOut": "You are no longer signed in. Sign in again to continue.",
-        "notFound": "This contact isn't on this phone any more."
-      }
+        "notFound": "This contact isn't in your list any more.",
+        "network": "SafeRide couldn't connect. Check your connection and try again."
+      },
+      "alertsOn": "Can receive alerts",
+      "alertsOff": "Can't receive alerts yet"
     },
     "guide": {
       "title": "Safety Guide",
@@ -433,55 +637,144 @@
         "title": "What SafeRide does today",
         "plan": "Lets you plan a journey: where from, where to and when.",
         "review": "Shows you the details to check before you save them.",
-        "status": "Keeps your journeys on this phone, and you mark each one completed or cancelled yourself."
+        "checklist": "Asks you to confirm a safety checklist before each journey starts.",
+        "route": "Records your route, speed and distance while a journey you started is in progress, with your permission.",
+        "status": "Keeps your journeys in your account; you start each one and mark it completed or cancelled yourself.",
+        "check": "Asks if you're okay when it notices unusual movement, on screen or as a notification."
       },
       "cannot": {
         "title": "Not available yet",
-        "tracking": "Live location or tracking during a journey.",
-        "sharing": "Sharing a journey with your trusted contacts.",
-        "alerts": "Automatic alerts or calls for help."
+        "sharing": "Sharing a journey or your location with your trusted contacts.",
+        "alerts": "Alerting your trusted contacts, calling emergency services, or calling anyone for you."
       },
       "plan": "Plan a journey",
       "history": "My Journeys"
     },
     "emergency": {
       "title": "Emergency Information",
-      "country": "Saudi Arabia",
-      "unifiedNote": "911 is the unified emergency number in Riyadh, Makkah, Madinah and the Eastern Province. Elsewhere in the Kingdom, use the numbers below.",
+      "warning": "Call emergency services only in a real emergency: when someone's life, health or safety is at risk, or there is a fire or a crime happening. A needless call can delay help for someone else.",
+      "youAreIn": "Emergency numbers in",
+      "change": "Change",
+      "choose": {
+        "title": "Which country are you in?",
+        "body": "Emergency numbers are different in each country. Choose the one you're in now; SafeRide doesn't guess it.",
+        "action": "Choose country"
+      },
       "services": {
-        "unified": "Unified emergency number",
+        "general": "Emergency",
         "police": "Police",
         "ambulance": "Ambulance",
-        "civilDefense": "Civil Defense",
-        "traffic": "Traffic police",
-        "roads": "Roads security"
+        "fire": "Fire and civil defense",
+        "traffic": "Traffic accidents",
+        "roadSecurity": "Road security"
       },
+      "inline": {
+        "general": "any emergency",
+        "police": "police",
+        "ambulance": "ambulance",
+        "fire": "fire",
+        "traffic": "traffic accidents",
+        "roadSecurity": "road security"
+      },
+      "about": {
+        "general": "One number for any emergency.",
+        "police": "A crime, or danger to someone's safety.",
+        "ambulance": "A medical emergency or a serious injury.",
+        "fire": "A fire, smoke, or someone trapped who needs rescue.",
+        "traffic": "A road accident.",
+        "roadSecurity": "Help on the highways between cities.",
+        "shared": "One number for {list}."
+      },
+      "joined": "{list} and {last}",
       "call": "Call",
-      "callNote": "Call opens your phone app with the number ready. You place the call yourself.",
-      "outside": "Outside Saudi Arabia these numbers may not work. Call the local emergency number where you are.",
-      "sources": "Sources: the Ministry of Interior (911 Unified Security Operations Centers), the Saudi Press Agency, and stc's emergency numbers. Last checked {date}.",
-      "callFailed": {
-        "title": "Your phone app didn't open",
-        "message": "Dial {number} yourself."
+      "callNote": "Call opens your phone app with the number ready. You place the call yourself, and SafeRide can't see whether it goes through.",
+      "secondary": "Only foreign governments' travel advice lists this number. Confirm it locally.",
+      "checked": "Checked against official sources on {date}:",
+      "unavailable": {
+        "title": "No checked numbers yet",
+        "body": "SafeRide hasn't verified the emergency numbers for {country}. Ask locally for the emergency number where you are."
+      },
+      "dial": {
+        "opened": {
+          "title": "Your phone app opened",
+          "message": "{number} is ready there. Press call in your phone app. SafeRide can't see whether the call was made."
+        },
+        "noDialer": {
+          "title": "This device can't make calls",
+          "message": "Dial {number} from a phone."
+        },
+        "failed": {
+          "title": "Your phone app didn't open",
+          "message": "Dial {number} yourself."
+        },
+        "invalidNumber": {
+          "title": "This number can't be dialled from SafeRide",
+          "message": "Dial {number} yourself in your phone app."
+        }
+      }
+    },
+    "invite": {
+      "linked": "This contact accepted your invite. If you don't answer a safety check, SafeRide tries to alert them through the app.",
+      "notLinked": "To receive alerts, this contact needs SafeRide on their own phone and this invite code. SafeRide can't reach a phone number on its own.",
+      "create": "Create an invite code",
+      "copy": "Copy the code",
+      "codeNote": "Give this code to your contact yourself. They enter it in SafeRide, under Safety. It works once, until {date}.",
+      "acceptTitle": "Enter an invite code",
+      "acceptNote": "By accepting, you agree to receive alerts if this person doesn't answer a SafeRide safety check. You'll see their name and, if they added one, their phone number, but never their location.",
+      "codeLabel": "Invite code",
+      "accept": "Accept",
+      "accepted": "You're now a trusted contact of {name}.",
+      "errors": {
+        "title": "That didn't work",
+        "invalidCode": "That code isn't right. Check it and try again.",
+        "noLongerValid": "This code can't be used any more. Ask for a new one.",
+        "ownInvite": "This invite is for your contact, not for you.",
+        "network": "SafeRide couldn't connect. Check your connection and try again.",
+        "unavailable": "This isn't available right now. Try again later."
+      }
+    },
+    "alerts": {
+      "title": "Alerts for you",
+      "channel": "Alerts from your contacts",
+      "channelBody": "When someone who made you a trusted contact doesn't answer a safety check.",
+      "cardTitle": "Please check on {name}",
+      "suddenDeceleration": "SafeRide noticed a sudden slowdown during {name}'s journey, and got no answer to its safety check. The journey was still in progress when the alert was sent.",
+      "prolongedStop": "SafeRide noticed a long stop during {name}'s journey, and got no answer to its safety check. The journey was still in progress when the alert was sent.",
+      "caution": "This doesn't confirm that anything happened. SafeRide hasn't contacted emergency services and doesn't know where they are. Try reaching them yourself.",
+      "call": "Call {name}",
+      "empty": {
+        "title": "No alerts",
+        "body": "When someone who made you a trusted contact doesn't answer a safety check, it shows here."
+      },
+      "failed": {
+        "title": "Alerts couldn't be loaded",
+        "body": "Check your connection and try again."
       }
     }
   },
   "about": {
     "title": "About SafeRide",
-    "intro": "SafeRide helps you plan safer journeys and keep your safety tools in one place. This is an early version that works entirely on this phone.",
+    "intro": "SafeRide helps you plan safer journeys and keep your safety tools in one place. This is an early version.",
     "stored": {
-      "title": "Kept on this phone",
-      "account": "Your name, email and optional phone number. Your password is stored only as a salted hash, never as you typed it.",
-      "journeys": "The journeys you plan, and the status you give them.",
-      "contacts": "Your trusted contacts.",
-      "preferences": "Your language and appearance."
+      "title": "Where your information is",
+      "account": "Your name, email and optional phone number, in your SafeRide account. Your password is checked by Firebase Authentication; SafeRide never stores it.",
+      "journeys": "Your journeys and their status, in your account.",
+      "route": "The route of a journey you started (its points, distance and times), recorded only while it was in progress and with your permission, in your account.",
+      "contacts": "Your trusted contacts, in your account.",
+      "preferences": "Your language and appearance stay on this phone.",
+      "safety": "If you don't answer a safety check: what kind of event it was and when, on this phone only."
     },
     "notYet": {
       "title": "Not part of this version",
-      "online": "Online accounts, syncing between devices, or password reset.",
-      "tracking": "Live location, journey tracking or sharing.",
-      "alerts": "Contacting anyone or calling for help on your behalf."
+      "sharing": "Sharing your location or your journeys with anyone.",
+      "alerts": "Alerting your trusted contacts, calling emergency services, or calling anyone on your behalf."
     },
-    "deviceNote": "Removing the app or clearing its data deletes everything above. Nothing is kept anywhere else."
+    "deviceNote": "Your account is kept on Firebase, Google's cloud service, so it follows you to another phone. Signing out or removing the app doesn't delete it; Delete account in Profile does.",
+    "offline": {
+      "title": "Without internet",
+      "works": "Works: signing in stays active, emergency numbers, the safety guide, recording a journey in progress, and the safety check.",
+      "saved": "Saved on this phone and sent later: journeys, contacts and route points. They can look saved before your account has them.",
+      "needs": "Needs a connection: signing in, creating an account, resetting a password and deleting your account. Lists show what this phone last saw."
+    }
   }
 }
