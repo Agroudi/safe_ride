@@ -61,6 +61,28 @@ abstract final class AppRoutes {
   static const String startJourney = 'start-journey';
   static const String startJourneyPath = '/journey/start/:id';
 
+  /// Choosing a place on the map. `extra`: which one, and any already chosen.
+  static const String pickPlace = 'pick-place';
+  static const String pickPlacePath = '/plan/place';
+
+  /// A journey on the map. Path parameter `id`.
+  static const String journeyMap = 'journey-map';
+  static const String journeyMapPath = '/journey/map/:id';
+
+  /// Sharing the current location: start it, or manage the share that is on.
+  static const String shareLocation = 'share-location';
+  static const String shareLocationPath = '/sharing';
+
+  /// Sharing a journey in progress. Path parameter `id`.
+  static const String shareJourney = 'share-journey';
+  static const String shareJourneyPath = '/sharing/journey/:id';
+
+  /// What a share's link opens, with no account. The token is the link's `#`
+  /// part, so it never reaches a server log or a Referer. The path matches the
+  /// web viewer's and the Android intent filter's.
+  static const String sharedView = 'shared-view';
+  static const String sharedViewPath = '/s';
+
   // Safety screens, pushed over the tabs.
 
   static const String trustedContacts = 'trusted-contacts';
@@ -72,6 +94,20 @@ abstract final class AppRoutes {
   /// Path parameter `id`.
   static const String editContact = 'edit-contact';
   static const String editContactPath = '/safety/contacts/edit/:id';
+
+  /// One connection; path parameter `id`, the other account's.
+  static const String manageConnection = 'manage-connection';
+  static const String manageConnectionPath = '/safety/connection/view/:id';
+
+  /// Answering an invite. The token is the link's `#` part, as with a share,
+  /// and none means the person pastes it. The path matches the web page's and
+  /// the Android intent filter's.
+  static const String connectionInvite = 'connection-invite';
+  static const String connectionInvitePath = '/c';
+
+  /// Where to find help: after a safety check nobody answered, or any time.
+  static const String safetyHelp = 'safety-help';
+  static const String safetyHelpPath = '/safety/help';
 
   static const String safetyGuide = 'safety-guide';
   static const String safetyGuidePath = '/safety/guide';

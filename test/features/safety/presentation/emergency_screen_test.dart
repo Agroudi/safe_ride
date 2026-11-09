@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
@@ -22,7 +23,12 @@ import 'package:safe_ride/features/safety/data/repository/phone_dialer.dart';
 import 'package:safe_ride/features/safety/logic/cubit/emergency_cubit.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/emergency_number_tile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
+import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
+import 'package:safe_ride/core/safety/emergency_position.dart';
 
+import '../../../core/safety/position_fakes.dart';
+import '../help_fakes.dart';
 import '../../../core/country/country_fakes.dart';
 
 /// Answers [outcome] and remembers the numbers; never opens anything.
@@ -48,12 +54,14 @@ void main() {
   late AppNotifier notices;
   late MemoryCountryRepository countries;
   late _Dialer dialer;
+  late FakePositionReader where;
 
   /// No Firestore, no network: everything comes from the phone.
   Future<void> boot(
     String language, {
     String? country,
     EmergencyRepository? numbers,
+    FakePositionReader? position,
   }) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'locale': language,
@@ -63,6 +71,7 @@ void main() {
     notices = AppNotifier();
     countries = MemoryCountryRepository(country);
     dialer = _Dialer();
+    where = position ?? FakePositionReader();
     await sl.reset();
     sl
       ..registerSingleton<AppNotifier>(notices)
@@ -70,8 +79,11 @@ void main() {
         () => EmergencyCubit(
           countries,
           numbers ?? BundledEmergencyRepository(EmergencyDataSource()),
-          dialer,
+          CallLauncher(dialer, RecordingComposer()),
         ),
+      )
+      ..registerFactory<EmergencyLocationCubit>(
+        () => stillLocationCubit(where),
       );
   }
 
@@ -98,6 +110,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: BlocProvider<PreferencesCubit>.value(
           value: prefs,
           child: ScreenUtilInit(
@@ -164,8 +177,12 @@ void main() {
     expect(find.text('999'), findsOneWidget);
     expect(text('safety.emergency.services.general'), findsOneWidget);
     expect(
-      find.text('One number for police, ambulance and fire.'),
+      find.text('One number for ambulance, police and fire.'),
       findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.textContaining('Hamad Medical Corporation'),
+      300,
     );
     expect(find.textContaining('Hamad Medical Corporation'), findsOneWidget);
   });
@@ -175,7 +192,24 @@ void main() {
   ) async {
     await boot('en', country: 'SA');
     await open(tester);
-    expect(find.textContaining('Riyadh, Makkah, Madinah'), findsOneWidget);
+    // The country says SafeRide can't tell the region; 911's own tile names
+    // the regions it answers in.
+    expect(
+      find.textContaining("SafeRide can't tell which region"),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('911'),
+          matching: find.byType(EmergencyNumberTile),
+        ),
+        matching: find.text(
+          'Only in Riyadh, Makkah, Madinah and the Eastern Province.',
+        ),
+      ),
+      findsOneWidget,
+    );
     for (final String n in <String>['911', '999', '997', '998', '993', '996']) {
       await tester.scrollUntilVisible(find.text(n), 200);
       expect(find.text(n), findsOneWidget);
@@ -234,9 +268,9 @@ void main() {
     await open(tester);
     expect(find.text('البحرين'), findsOneWidget);
     expect(find.text('الطوارئ'), findsOneWidget);
-    expect(find.text('الحوادث المرورية'), findsOneWidget);
+    expect(find.text('المرور / الحوادث المرورية'), findsOneWidget);
     expect(
-      find.text('رقم واحد لكلٍّ من الشرطة والإسعاف والإطفاء.'),
+      find.text('رقم واحد لكلٍّ من الإسعاف والشرطة والإطفاء.'),
       findsOneWidget,
     );
     final Finder tile = find.byType(EmergencyNumberTile).first;
@@ -271,4 +305,189 @@ void main() {
       expect((tile.decoration! as BoxDecoration).color, palette.surface);
     });
   }
+
+  group('Batch 20: the directory', () {
+    testWidgets('a service with no checked number is said, with the number '
+        'to call instead', (WidgetTester tester) async {
+      await boot('en', country: 'KW');
+      await open(tester);
+      expect(
+        find.textContaining(
+          'SafeRide has no checked number of its own for traffic accidents '
+          'in Kuwait.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('If anyone is hurt or in danger, call'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('two quick taps on Call open the phone app once', (
+      WidgetTester tester,
+    ) async {
+      await boot('en', country: 'KW');
+      await open(tester);
+      final Finder call = text('safety.emergency.call');
+      await tester.ensureVisible(call);
+      await tester.pump();
+      await tester.tap(call);
+      await tester.tap(call);
+      await tester.pumpAndSettle();
+      expect(dialer.dialled, <String>['112']);
+      await outlast(tester);
+    });
+
+    testWidgets('what to do on the call: no diagnosis, and that SafeRide '
+        "can't get the location to them", (WidgetTester tester) async {
+      await boot('en', country: 'SA');
+      await open(tester);
+      await tester.scrollUntilVisible(
+        text('safety.guidance.calling.location'),
+        300,
+      );
+      expect(text('safety.guidance.which.ambulance'), findsOneWidget);
+      expect(text('safety.guidance.calling.where'), findsOneWidget);
+      expect(text('safety.guidance.calling.rely'), findsOneWidget);
+    });
+  });
+
+  group('Batch 20: where you are', () {
+    final DateTime fixed = DateTime.now().toUtc();
+    PositionReading here({Duration ago = Duration.zero, double? accuracy}) =>
+        PositionReading(
+          latitude: 24.713621,
+          longitude: 46.675302,
+          at: fixed.subtract(ago),
+          accuracy: accuracy,
+        );
+
+    Future<void> card(WidgetTester tester) async {
+      await tester.scrollUntilVisible(text('safety.location.note'), 300);
+    }
+
+    testWidgets('no location yet: said; one reading only on the tap', (
+      WidgetTester tester,
+    ) async {
+      await boot(
+        'en',
+        country: 'SA',
+        position: FakePositionReader(
+          located: EmergencyPosition(
+            access: PositionAccess.allowed,
+            reading: here(accuracy: 9),
+          ),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      expect(text('safety.location.none'), findsOneWidget);
+      expect(where.readings, 0, reason: 'nothing read on its own');
+
+      await tap(tester, text('safety.location.find'));
+      expect(where.readings, 1);
+      expect(text('safety.location.current'), findsOneWidget);
+      expect(find.text('24.71362, 46.67530'), findsOneWidget);
+      expect(find.text('Accurate to about 9 m.'), findsOneWidget);
+      expect(text('safety.location.update'), findsOneWidget);
+    });
+
+    testWidgets('an old reading is the last known location, with its age and '
+        'a warning — never "current"', (WidgetTester tester) async {
+      await boot(
+        'en',
+        country: 'SA',
+        position: FakePositionReader(
+          known: EmergencyPosition(
+            access: PositionAccess.allowed,
+            reading: here(ago: const Duration(minutes: 12), accuracy: 240),
+          ),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      expect(text('safety.location.lastKnown'), findsOneWidget);
+      expect(text('safety.location.current'), findsNothing);
+      expect(find.text('12 minutes ago'), findsOneWidget);
+      expect(text('safety.location.stale'), findsOneWidget);
+      expect(find.textContaining('could be 240 m off'), findsOneWidget);
+    });
+
+    testWidgets('location not allowed: said, and Find is off — no prompt', (
+      WidgetTester tester,
+    ) async {
+      await boot(
+        'en',
+        country: 'SA',
+        position: FakePositionReader(
+          known: const EmergencyPosition(access: PositionAccess.notAllowed),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      expect(text('safety.location.notAllowed'), findsOneWidget);
+      await tester.tap(text('safety.location.find'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(where.readings, 0);
+    });
+
+    testWidgets('location off: said', (WidgetTester tester) async {
+      await boot(
+        'en',
+        country: 'SA',
+        position: FakePositionReader(
+          known: const EmergencyPosition(access: PositionAccess.servicesOff),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      expect(text('safety.location.servicesOff'), findsOneWidget);
+    });
+
+    testWidgets('a journey in progress shows its destination; the card says '
+        'nothing is sent', (WidgetTester tester) async {
+      await boot(
+        'en',
+        country: 'SA',
+        position: FakePositionReader(
+          known: EmergencyPosition(
+            access: PositionAccess.allowed,
+            reading: here(accuracy: 6),
+            destination: 'King Fahd Hospital',
+          ),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      expect(find.textContaining('King Fahd Hospital'), findsOneWidget);
+      expect(
+        find.textContaining("SafeRide doesn't send your location"),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('in Arabic: coordinates read left to right in Latin digits', (
+      WidgetTester tester,
+    ) async {
+      await boot(
+        'ar',
+        country: 'SA',
+        position: FakePositionReader(
+          known: EmergencyPosition(
+            access: PositionAccess.allowed,
+            reading: here(accuracy: 6),
+          ),
+        ),
+      );
+      await open(tester);
+      await card(tester);
+      final SelectableText coordinates = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
+      expect(coordinates.data, '24.71362, 46.67530');
+      expect(coordinates.textDirection, TextDirection.ltr);
+      expect(find.text('موقعك الحالي'), findsOneWidget);
+    });
+  });
 }

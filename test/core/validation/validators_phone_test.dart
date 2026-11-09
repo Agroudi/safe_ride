@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/validation/validators.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: Builder(
           builder: (BuildContext context) {
             v = Validators.of(context);

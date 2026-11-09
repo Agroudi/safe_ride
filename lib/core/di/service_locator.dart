@@ -4,7 +4,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
+import 'package:http/http.dart' as http;
 import 'package:safe_ride/core/account/account_data.dart';
+import 'package:safe_ride/core/account/sign_out_step.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/country/country_cubit.dart';
 import 'package:safe_ride/core/country/country_repository.dart';
@@ -15,6 +17,10 @@ import 'package:safe_ride/core/preferences/preferences_account_data.dart';
 import 'package:safe_ride/core/preferences/preferences_cubit.dart';
 import 'package:safe_ride/core/push/push_notifications.dart';
 import 'package:safe_ride/core/push/push_permission_cubit.dart';
+import 'package:safe_ride/core/safety/escalation_gate.dart';
+import 'package:safe_ride/core/safety/emergency_position.dart';
+import 'package:safe_ride/features/journeys/data/repository/tracker_position_reader.dart';
+import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/authentication/data/repository/auth_repository.dart';
 import 'package:safe_ride/features/authentication/data/repository/firebase_auth_repository.dart';
@@ -25,47 +31,75 @@ import 'package:safe_ride/features/authentication/logic/cubit/password_reset_cub
 import 'package:safe_ride/features/authentication/logic/cubit/startup_cubit.dart';
 import 'package:safe_ride/features/journeys/data/repository/escalation_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/escalation_sync.dart';
+import 'package:safe_ride/features/journeys/data/repository/firestore_share_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_account_data.dart';
+import 'package:safe_ride/features/journeys/data/repository/location_sharing.dart';
+import 'package:safe_ride/features/journeys/data/repository/share_link_check.dart';
+import 'package:safe_ride/features/journeys/data/repository/share_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/shared_view_repository.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/share_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/shared_view_cubit.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/file_track_store.dart';
 import 'package:safe_ride/features/journeys/data/repository/firestore_escalation_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/firestore_journey_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/firestore_route_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/geolocator_location_source.dart';
+import 'package:safe_ride/features/journeys/data/repository/geocoding_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/incident_monitor.dart';
 import 'package:safe_ride/features/journeys/data/repository/incident_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
 import 'package:safe_ride/features/journeys/data/repository/local_safety_notifications.dart';
 import 'package:safe_ride/features/journeys/data/repository/location_source.dart';
+import 'package:safe_ride/features/journeys/data/repository/map_http.dart';
+import 'package:safe_ride/features/journeys/data/repository/map_tile_provider.dart';
+import 'package:safe_ride/features/journeys/data/repository/open_free_map_tiles.dart';
+import 'package:safe_ride/features/journeys/data/repository/osrm_routing_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/photon_geocoding_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/route_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/routing_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/safety_check_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/safety_check_service.dart';
 import 'package:safe_ride/features/journeys/data/repository/safety_notifications.dart';
 import 'package:safe_ride/features/journeys/data/repository/track_store.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/escalation_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/journey_map_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_start_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/open_escalation_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/incident_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/place_picker_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/place_search_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/route_preview_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/safety_check_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/safety_notice_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/tracking_cubit.dart';
 import 'package:safe_ride/features/safety/data/repository/cloud_contact_invite_repository.dart';
+import 'package:safe_ride/features/safety/data/repository/connection_link_check.dart';
+import 'package:safe_ride/features/safety/data/repository/connection_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/contact_invite_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/emergency_data_source.dart';
 import 'package:safe_ride/features/safety/data/repository/emergency_repository.dart';
+import 'package:safe_ride/features/safety/data/repository/firestore_connection_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/firestore_received_alerts_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/firestore_trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
+import 'package:safe_ride/features/safety/data/repository/message_composer.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_reach_cubit.dart';
 import 'package:safe_ride/features/safety/data/repository/phone_dialer.dart';
 import 'package:safe_ride/features/safety/data/repository/received_alerts_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/logic/cubit/accept_connection_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/connections_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_form_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_invite_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_links_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contacts_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/emergency_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/received_alerts_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/safety_help_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The one wiring point — the documented exception to "a feature never
@@ -94,6 +128,12 @@ Future<void> setupServiceLocator({
   SafetyNotifications? safetyNotifications,
   ContactInviteRepository? invites,
   PhoneDialer? dialer,
+  MessageComposer? composer,
+  GeocodingRepository? geocoding,
+  RoutingRepository? routing,
+  MapTileProvider? mapTiles,
+  ShareLinkCheck? shareLinks,
+  ConnectionLinkCheck? connectionLinks,
 }) async {
   // Awaited here so every preference read after this point is synchronous.
   final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -116,6 +156,7 @@ Future<void> setupServiceLocator({
         // In this order: nothing may write for the account once it is erased.
         accountData: () => <AccountData>[
           sl<PushNotifications>(),
+          sl<LocationSharing>(),
           JourneyAccountData(
             tracker: sl<JourneyTracker>(),
             safetyChecks: sl<SafetyCheckService>(),
@@ -123,6 +164,7 @@ Future<void> setupServiceLocator({
             incidents: sl<IncidentRepository>(),
             checks: sl<SafetyCheckRepository>(),
           ),
+          sl<FirestoreConnectionRepository>(),
           FirestoreAccountData(sl<FirebaseFirestore>()),
           PreferencesAccountData(sl<AppPreferences>()),
         ],
@@ -182,6 +224,25 @@ Future<void> setupServiceLocator({
         live: AppFeatures.contactAlerts,
       ),
     )
+    // The one escalation lifecycle, as the safety feature may see it.
+    ..registerLazySingleton<EscalationGate>(sl.get<SafetyCheckService>)
+    // Where the user is, for the emergency screens: the one recording's
+    // fixes, never a second GPS source.
+    ..registerLazySingleton<EmergencyPositionReader>(
+      () =>
+          TrackerPositionReader(sl<JourneyTracker>(), sl<JourneyRepository>()),
+    )
+    ..registerFactory<OpenEscalationCubit>(
+      () => OpenEscalationCubit(sl<EscalationGate>()),
+    )
+    ..registerFactory<SafetyHelpCubit>(
+      () => SafetyHelpCubit(
+        sl<EscalationGate>(),
+        sl<ConnectionRepository>(),
+        sl<TrustedContactsRepository>(),
+        sl<CallLauncher>(),
+      ),
+    )
     ..registerFactory<SafetyCheckCubit>(
       () => SafetyCheckCubit(sl<SafetyCheckService>(), sl<EscalationSync>()),
     )
@@ -204,6 +265,60 @@ Future<void> setupServiceLocator({
         journeys: sl<JourneyRepository>(),
         session: sl<SessionReader>(),
         observer: sl<IncidentMonitor>(),
+      ),
+    )
+    ..registerLazySingleton<ShareRepository>(
+      () => FirestoreShareRepository(sl<FirebaseFirestore>()),
+    )
+    ..registerLazySingleton<SharedViewRepository>(
+      () => FirestoreSharedViewRepository(sl<FirebaseFirestore>()),
+    )
+    ..registerLazySingleton<ShareLinkCheck>(
+      () => shareLinks ?? HttpShareLinkCheck(sl<http.Client>()),
+    )
+    ..registerLazySingleton<LocationSharing>(
+      () => LocationSharing(
+        tracker: sl<JourneyTracker>(),
+        shares: sl<ShareRepository>(),
+        journeys: sl<JourneyRepository>(),
+        session: sl<SessionReader>(),
+        links: sl<ShareLinkCheck>(),
+      ),
+    )
+    ..registerFactory<ShareCubit>(
+      () => ShareCubit(
+        sl<LocationSharing>(),
+        sl<JourneyTracker>(),
+        sl<JourneyRepository>(),
+      ),
+    )
+    ..registerFactory<SharedViewCubit>(
+      () => SharedViewCubit(sl<SharedViewRepository>()),
+    )
+    ..registerLazySingleton<http.Client>(http.Client.new)
+    ..registerLazySingleton<GeocodingRepository>(
+      () => geocoding ?? PhotonGeocodingRepository(MapHttp(sl<http.Client>())),
+    )
+    ..registerLazySingleton<RoutingRepository>(
+      () => routing ?? OsrmRoutingRepository(MapHttp(sl<http.Client>())),
+    )
+    ..registerLazySingleton<MapTileProvider>(
+      () => mapTiles ?? OpenFreeMapTiles(sl<http.Client>()),
+    )
+    ..registerFactory<PlaceSearchCubit>(
+      () => PlaceSearchCubit(sl<GeocodingRepository>()),
+    )
+    ..registerFactory<PlacePickerCubit>(
+      () => PlacePickerCubit(sl<GeocodingRepository>(), sl<JourneyTracker>()),
+    )
+    ..registerFactory<RoutePreviewCubit>(
+      () => RoutePreviewCubit(sl<RoutingRepository>()),
+    )
+    ..registerFactory<JourneyMapCubit>(
+      () => JourneyMapCubit(
+        sl<JourneyTracker>(),
+        sl<JourneyRepository>(),
+        sl<RoutingRepository>(),
       ),
     )
     ..registerLazySingleton<CountryRepository>(
@@ -245,7 +360,11 @@ Future<void> setupServiceLocator({
       () => PasswordResetCubit(sl<AuthRepository>()),
     )
     ..registerFactory<AccountCubit>(
-      () => AccountCubit(sl<AuthRepository>(), sl<DeviceRegistration>()),
+      () => AccountCubit(
+        sl<AuthRepository>(),
+        sl<DeviceRegistration>(),
+        signOutSteps: <SignOutStep>[sl<LocationSharing>()],
+      ),
     )
     ..registerFactory<AccountDeletionCubit>(
       () => AccountDeletionCubit(sl<AuthRepository>()),
@@ -255,6 +374,7 @@ Future<void> setupServiceLocator({
         sl<JourneyRepository>(),
         sl<SessionReader>(),
         tracker: sl<JourneyTracker>(),
+        sharing: sl<LocationSharing>(),
       ),
     )
     ..registerFactory<PlanJourneyCubit>(
@@ -273,6 +393,25 @@ Future<void> setupServiceLocator({
     )
     ..registerFactory<ContactFormCubit>(
       () => ContactFormCubit(sl<TrustedContactsRepository>()),
+    )
+    ..registerLazySingleton<ConnectionLinkCheck>(
+      () => connectionLinks ?? HttpConnectionLinkCheck(sl<http.Client>()),
+    )
+    ..registerLazySingleton<FirestoreConnectionRepository>(
+      () => FirestoreConnectionRepository(
+        sl<FirebaseFirestore>(),
+        sl<SessionReader>(),
+        sl<ConnectionLinkCheck>(),
+      ),
+    )
+    ..registerLazySingleton<ConnectionRepository>(
+      sl.get<FirestoreConnectionRepository>,
+    )
+    ..registerFactory<ConnectionsCubit>(
+      () => ConnectionsCubit(sl<ConnectionRepository>()),
+    )
+    ..registerFactory<AcceptConnectionCubit>(
+      () => AcceptConnectionCubit(sl<ConnectionRepository>()),
     )
     ..registerLazySingleton<ContactInviteRepository>(
       () =>
@@ -299,7 +438,7 @@ Future<void> setupServiceLocator({
     ..registerFactory<ReceivedAlertsCubit>(
       () => ReceivedAlertsCubit(
         sl<ReceivedAlertsRepository>(),
-        sl<PhoneDialer>(),
+        sl<CallLauncher>(),
       ),
     )
     ..registerLazySingleton<EmergencyRepository>(
@@ -308,11 +447,23 @@ Future<void> setupServiceLocator({
     ..registerLazySingleton<PhoneDialer>(
       () => dialer ?? const UrlLauncherPhoneDialer(),
     )
+    ..registerLazySingleton<MessageComposer>(
+      () => composer ?? const UrlLauncherMessageComposer(),
+    )
+    ..registerLazySingleton<CallLauncher>(
+      () => CallLauncher(sl<PhoneDialer>(), sl<MessageComposer>()),
+    )
+    ..registerFactory<ContactReachCubit>(
+      () => ContactReachCubit(sl<CallLauncher>()),
+    )
+    ..registerFactory<EmergencyLocationCubit>(
+      () => EmergencyLocationCubit(sl<EmergencyPositionReader>()),
+    )
     ..registerFactory<EmergencyCubit>(
       () => EmergencyCubit(
         sl<CountryRepository>(),
         sl<EmergencyRepository>(),
-        sl<PhoneDialer>(),
+        sl<CallLauncher>(),
       ),
     );
 }

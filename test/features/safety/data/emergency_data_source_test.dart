@@ -79,7 +79,7 @@ void main() {
           isNotEmpty,
           reason: c.code,
         );
-        expect(numbers.checkedOn, DateTime.utc(2026, 11, 3));
+        expect(numbers.checkedOn, DateTime.utc(2026, 11, 8));
         for (final EmergencyService s in numbers.services) {
           expect(UrlLauncherPhoneDialer.isDialable(s.number), isTrue);
         }

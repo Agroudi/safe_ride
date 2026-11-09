@@ -83,6 +83,22 @@ class GeolocatorLocationSource implements LocationSource {
           );
 
   @override
+  Future<LocationFix?> current() async {
+    try {
+      return _fix(
+        await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 15),
+          ),
+        ),
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
   Stream<bool> get serviceChanges => Geolocator.getServiceStatusStream().map(
     (ServiceStatus s) => s == ServiceStatus.enabled,
   );

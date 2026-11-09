@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:safe_ride/features/journeys/data/models/incident_detection_config.dart';
 import 'package:safe_ride/features/journeys/data/models/location_fix.dart';
 import 'package:safe_ride/features/journeys/data/models/potential_incident.dart';
+import 'package:safe_ride/features/journeys/data/models/route_math.dart';
 import 'package:safe_ride/features/journeys/data/repository/incident_detection_engine.dart';
 import 'package:safe_ride/features/journeys/data/repository/incident_repository.dart';
 import 'package:safe_ride/features/journeys/data/repository/tracking_observer.dart';
@@ -16,8 +18,12 @@ import 'package:safe_ride/features/journeys/data/repository/tracking_observer.da
 /// did) · dismissed (the user said they are fine) · superseded (a newer
 /// event about the same thing replaced it). At most one open movement event
 /// (sudden deceleration, prolonged stop) and one open interruption per
-/// journey; the same condition is never stored twice. It sends nothing,
-/// calls no one, and alerts no one.
+/// journey; the same condition is never stored twice, and once the user said
+/// they are fine about a place, nothing there is raised again until the
+/// vehicle has moved on. (After the app was closed, a new engine needs the
+/// journey to move before any stop counts, so a vehicle still parked is
+/// never asked about twice.) It sends nothing, calls no one, and alerts no
+/// one.
 class IncidentMonitor implements TrackingObserver {
   IncidentMonitor(
     this._repository, {
@@ -48,9 +54,15 @@ class IncidentMonitor implements TrackingObserver {
     String journeyId,
     DateTime at, {
     DateTime? lastFixBefore,
+    IncidentPlace? destination,
   }) {
     if (_engine?.journeyId != journeyId || _uid != uid) {
-      _engine = IncidentDetectionEngine(journeyId: journeyId, config: config);
+      final IncidentDetectionEngine engine = IncidentDetectionEngine(
+        journeyId: journeyId,
+        config: config,
+        destination: destination,
+      );
+      _engine = engine;
       _noticed.clear();
     }
     _uid = uid;
@@ -108,7 +120,7 @@ class IncidentMonitor implements TrackingObserver {
         () => switch (o) {
           IncidentDetected(:final IncidentSignal signal) => _record(
             uid,
-            engine.journeyId,
+            engine,
             signal,
           ),
           IncidentCleared(:final type, :final resolution, :final at) => _clear(
@@ -123,7 +135,13 @@ class IncidentMonitor implements TrackingObserver {
     }
   }
 
-  Future<void> _record(String uid, String journeyId, IncidentSignal s) async {
+  Future<void> _record(
+    String uid,
+    IncidentDetectionEngine engine,
+    IncidentSignal s,
+  ) async {
+    final String journeyId = engine.journeyId;
+    if (await _answeredHere(uid, engine, s)) return;
     final List<PotentialIncident> open = <PotentialIncident>[
       for (final PotentialIncident i in await _open(uid, journeyId))
         if (_family(i.type) == _family(s.type)) i,
@@ -173,6 +191,41 @@ class IncidentMonitor implements TrackingObserver {
         interruption: s.interruption,
       ),
     );
+  }
+
+  /// The user said they are fine about an event here, and the vehicle has not
+  /// moved on since: the same situation, asked about already. Their answer
+  /// stands until it moves.
+  Future<bool> _answeredHere(
+    String uid,
+    IncidentDetectionEngine engine,
+    IncidentSignal s,
+  ) async {
+    final double? lat = s.lat;
+    final double? lng = s.lng;
+    if (s.type == IncidentType.trackingInterrupted ||
+        lat == null ||
+        lng == null) {
+      return false;
+    }
+    final DateTime? moved = engine.lastMovingAt;
+    final double reach = math.max(config.resumeDistance, 2 * (s.accuracy ?? 0));
+    for (final PotentialIncident i in await _repository.forJourney(
+      uid,
+      engine.journeyId,
+    )) {
+      final double? iLat = i.lat;
+      final double? iLng = i.lng;
+      if (i.status != IncidentStatus.dismissed ||
+          i.type == IncidentType.trackingInterrupted ||
+          iLat == null ||
+          iLng == null ||
+          (moved != null && !i.updatedAt.isAfter(moved))) {
+        continue;
+      }
+      if (RouteMath.distance(iLat, iLng, lat, lng) <= reach) return true;
+    }
+    return false;
   }
 
   Future<void> _clear(

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- The app looks for this before it offers a link: see ShareLinkCheck. -->
+    <meta name="saferide-share-viewer" content="1" />
+    <title>SafeRide</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+      integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="share.css" />
+  </head>
+  <body>
+    <div id="map" aria-hidden="true"></div>
+    <section id="panel" aria-live="polite">
+      <h1 id="title"></h1>
+      <p id="status"></p>
+      <p id="details"></p>
+    </section>
+    <section id="message" hidden>
+      <h1 id="message-title"></h1>
+      <p id="message-body"></p>
+    </section>
+    <script src="share-config.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+      integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj"
+      crossorigin="anonymous"
+    ></script>
+    <script type="module" src="share.js"></script>
+  </body>
+</html>

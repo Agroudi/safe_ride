@@ -1,9 +1,29 @@
 import 'dart:async';
 
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/widgets.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:safe_ride/core/safety/escalation_gate.dart';
+import 'package:safe_ride/core/theme/app_colors.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
+import 'package:safe_ride/features/journeys/data/models/planned_route.dart';
+import 'package:safe_ride/features/journeys/data/repository/geocoding_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/map_tile_provider.dart';
+import 'package:safe_ride/features/journeys/data/repository/routing_repository.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/route_preview_cubit.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/escalation.dart';
 import 'package:safe_ride/features/journeys/data/models/location_fix.dart';
+import 'package:safe_ride/features/journeys/data/models/location_share.dart';
+import 'package:safe_ride/features/journeys/data/models/shared_view.dart';
+import 'package:safe_ride/features/journeys/data/repository/firestore_journey_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
+import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
+import 'package:safe_ride/features/journeys/data/repository/location_sharing.dart';
+import 'package:safe_ride/features/journeys/data/repository/share_link_check.dart';
+import 'package:safe_ride/features/journeys/data/repository/share_repository.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/share_cubit.dart';
 import 'package:safe_ride/features/journeys/data/models/potential_incident.dart';
 import 'package:safe_ride/features/journeys/data/models/safety_check.dart';
 import 'package:safe_ride/features/journeys/data/models/track_point.dart';
@@ -56,9 +76,22 @@ class FakeLocation implements LocationSource {
   @override
   Future<void> requestNotices() async => noticesAsked++;
 
+  String? lastNoticeTitle;
+
+  /// What a one-off reading gives, and how many were asked for.
+  LocationFix? oneOff;
+  int oneOffs = 0;
+
+  @override
+  Future<LocationFix?> current() async {
+    oneOffs++;
+    return oneOff;
+  }
+
   @override
   Stream<LocationFix> fixes({required String title, required String text}) {
     listens++;
+    lastNoticeTitle = title;
     return fixesController.stream;
   }
 
@@ -178,6 +211,12 @@ class FakeRoute implements RouteRepository {
     if (wait != null) await wait.future;
   }
 
+  /// What the account holds of the route.
+  List<TrackPoint> stored = <TrackPoint>[];
+
+  @override
+  Future<List<TrackPoint>> points(String journeyId) async => stored;
+
   /// What the account would hold: the last summary sent.
   @override
   Future<RouteSummary?> summary(String journeyId) async =>
@@ -292,10 +331,18 @@ class FakeSafetyNotifications implements SafetyNotifications {
   Future<void> prepare() async {}
 
   @override
-  Future<void> asking(SafetyCheck check) async => _post(check.id);
+  Future<bool> asking(SafetyCheck check) async {
+    if (now != SafetyNoticeAccess.allowed) return false;
+    _post(check.id);
+    return true;
+  }
 
   @override
-  Future<void> noAnswer() async => _post('noAnswer');
+  Future<bool> noAnswer(SafetyCheck check) async {
+    if (now != SafetyNoticeAccess.allowed) return false;
+    _post('noAnswer');
+    return true;
+  }
 
   @override
   Future<void> clear() async => _post('clear');
@@ -353,8 +400,83 @@ class FakeEscalations implements EscalationRepository {
   Stream<Escalation?> watch(String uid, String checkId) => record.stream;
 }
 
+/// A map with no tiles: nothing reaches a network in a test.
+class FakeMapTiles implements MapTileProvider {
+  /// Makes the style fail, as with no connection.
+  MapFailure? failure;
+  final List<bool> asked = <bool>[];
+
+  @override
+  final ValueNotifier<bool> reachable = ValueNotifier<bool>(true);
+
+  @override
+  String get attribution => '© tiles';
+
+  @override
+  Future<Widget> layer({required bool dark, required AppColors colors}) async {
+    asked.add(dark);
+    final MapFailure? f = failure;
+    if (f != null) throw f;
+    return SizedBox(key: ValueKey<String>(dark ? 'tiles.dark' : 'tiles.light'));
+  }
+}
+
+/// Places decided by the test, counting what was asked.
+class FakeGeocoding implements GeocodingRepository {
+  List<JourneyPlace> results = <JourneyPlace>[];
+  JourneyPlace? named;
+  MapFailure? failure;
+  final List<String> searches = <String>[];
+  int reverses = 0;
+
+  /// Holds a search open, to overtake it.
+  Completer<void>? hold;
+  bool cancelled = false;
+
+  @override
+  Future<List<JourneyPlace>> search(
+    String query, {
+    required String languageCode,
+    LatLng? near,
+    Future<void>? cancel,
+  }) async {
+    searches.add(query);
+    unawaited(cancel?.then((_) => cancelled = true));
+    await hold?.future;
+    final MapFailure? f = failure;
+    if (f != null) throw f;
+    return results;
+  }
+
+  @override
+  Future<JourneyPlace?> reverse(
+    LatLng point, {
+    required String languageCode,
+  }) async {
+    reverses++;
+    final MapFailure? f = failure;
+    if (f != null) throw f;
+    return named;
+  }
+}
+
+/// Routes decided by the test, counting what was asked.
+class FakeRouting implements RoutingRepository {
+  PlannedRoute? answer;
+  MapFailure failure = const MapFailure(MapFailureCode.unavailable);
+  int asked = 0;
+
+  @override
+  Future<PlannedRoute> route(LatLng from, LatLng to) async {
+    asked++;
+    final PlannedRoute? a = answer;
+    if (a == null) throw failure;
+    return a;
+  }
+}
+
 /// Registers what a journey screen's safety notes need: nothing unanswered,
-/// notifications allowed.
+/// notifications allowed. And the map's providers, none of them real.
 void registerSafetyNotes(SessionReader session) {
   final MemorySafetyCheckRepository checks = MemorySafetyCheckRepository();
   final FakeEscalations server = FakeEscalations();
@@ -366,13 +488,128 @@ void registerSafetyNotes(SessionReader session) {
     updates: const Stream<SafetyCheck?>.empty(),
     live: false,
   );
+  final FakeRouting routing = FakeRouting();
   sl
+    ..registerSingleton<MapTileProvider>(FakeMapTiles())
+    ..registerSingleton<RoutingRepository>(routing)
+    ..registerFactory<RoutePreviewCubit>(() => RoutePreviewCubit(routing))
     ..registerFactory<EscalationCubit>(
       () => EscalationCubit(checks, server, sync, session),
     )
     ..registerFactory<SafetyNoticeCubit>(
       () => SafetyNoticeCubit(FakeSafetyNotifications()),
+    )
+    ..registerFactory<ShareCubit>(() {
+      final JourneyRepository journeys = FirestoreJourneyRepository(
+        FakeFirebaseFirestore(),
+        session,
+      );
+      final JourneyTracker tracker = JourneyTracker(
+        location: FakeLocation(now: LocationAccess.granted),
+        store: MemoryTrackStore(),
+        route: FakeRoute(),
+        journeys: journeys,
+        session: session,
+        translate: (String k) => k,
+      );
+      return ShareCubit(
+        LocationSharing(
+          tracker: tracker,
+          shares: FakeShares(),
+          journeys: journeys,
+          session: session,
+          links: FakeShareLinks(),
+        ),
+        tracker,
+        journeys,
+      );
+    });
+}
+
+/// [ShareRepository] in memory, writing down what would reach the server.
+class FakeShares implements ShareRepository {
+  final List<ShareUpdate> published = <ShareUpdate>[];
+  final List<ShareUpdate> finished = <ShareUpdate>[];
+  final List<String> stopped = <String>[];
+  final Map<String, ShareRecord> saved = <String, ShareRecord>{};
+
+  /// Thrown by [publish]; [create] throws [createFailure].
+  Object? publishFailure;
+  Object? createFailure;
+  Object? finishFailure;
+
+  /// What [stop] answers: false is "queued for when the phone is back online".
+  bool stopConfirmed = true;
+  Object? stopFailure;
+  Completer<void>? hold;
+
+  @override
+  Future<ShareRecord> create({
+    required String uid,
+    required String token,
+    required ShareKind kind,
+    required DateTime expiresAt,
+    String? journeyId,
+    SharedPlace? origin,
+    SharedPlace? destination,
+  }) async {
+    final Object? f = createFailure;
+    if (f != null) throw f;
+    final ShareRecord r = ShareRecord(
+      token: token,
+      kind: kind,
+      expiresAt: expiresAt,
+      journeyId: journeyId,
     );
+    saved[token] = r;
+    return r;
+  }
+
+  @override
+  Future<void> publish(String token, ShareUpdate update) async {
+    final Completer<void>? wait = hold;
+    if (wait != null) await wait.future;
+    final Object? f = publishFailure;
+    if (f != null) throw f;
+    published.add(update);
+  }
+
+  @override
+  Future<void> finish(
+    String uid,
+    String token, {
+    required DateTime expiresAt,
+    required ShareUpdate last,
+  }) async {
+    final Object? f = finishFailure;
+    if (f != null) throw f;
+    finished.add(last);
+    saved[token] = saved[token]!.copyWith(expiresAt: expiresAt);
+  }
+
+  @override
+  Future<bool> stop(String uid, String token) async {
+    final Object? f = stopFailure;
+    if (f != null) throw f;
+    stopped.add(token);
+    saved.remove(token);
+    return stopConfirmed;
+  }
+
+  @override
+  Future<List<ShareRecord>> records(String uid) async => saved.values.toList();
+}
+
+/// [ShareLinkCheck] that answers what the test decides.
+class FakeShareLinks implements ShareLinkCheck {
+  bool viewer = true;
+  bool public = true;
+
+  @override
+  Future<bool> viewerReady() async => viewer;
+
+  @override
+  Future<bool> readable(String token) async => public;
 }
 
 /// Timers that fire only when the test moves the clock ([advance]).
@@ -420,4 +657,20 @@ class FakeTimer implements Timer {
 
   @override
   int get tick => 0;
+}
+
+/// An escalation lifecycle with nothing open: for screens that only show it.
+class NoEscalations implements EscalationGate {
+  @override
+  Stream<void> get changed => const Stream<void>.empty();
+
+  @override
+  Future<OpenEscalation?> latestOpen() async => null;
+
+  @override
+  Future<OpenEscalation?> openFor(String journeyId) async => null;
+
+  @override
+  Future<ResolveOutcome> resolveSafe(String checkId) async =>
+      ResolveOutcome.notOpen;
 }

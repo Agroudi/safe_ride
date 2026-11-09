@@ -3,6 +3,10 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'potential_incident.freezed.dart';
 part 'potential_incident.g.dart';
 
+/// A point on the map, for what detection is told about a journey: where it
+/// is planned to end, or where an event already is.
+typedef IncidentPlace = ({double latitude, double longitude});
+
 /// What kind of unusual movement was noticed. None of them is proof of an
 /// accident.
 enum IncidentType {

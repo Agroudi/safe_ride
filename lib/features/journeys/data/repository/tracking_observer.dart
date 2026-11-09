@@ -7,12 +7,14 @@ import 'package:safe_ride/features/journeys/data/models/potential_incident.dart'
 /// must return at once: the watcher queues its own work.
 abstract interface class TrackingObserver {
   /// Recording of [journeyId] began or resumed; [lastFixBefore] is the last
-  /// fix of a recording the app was closed in the middle of.
+  /// fix of a recording the app was closed in the middle of; [destination] is
+  /// where the journey was planned to end, when it was picked on the map.
   void started(
     String uid,
     String journeyId,
     DateTime at, {
     DateTime? lastFixBefore,
+    IncidentPlace? destination,
   });
 
   /// A fix arrived (trusted or not — the watcher judges for itself).

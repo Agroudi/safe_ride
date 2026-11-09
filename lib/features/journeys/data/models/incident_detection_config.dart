@@ -27,7 +27,12 @@ final class IncidentDetectionConfig {
     this.highDeceleration = 7.0,
     this.sustainWindow = const Duration(seconds: 15),
     this.confirmStill = const Duration(seconds: 15),
+    this.confirmStillUnsure = const Duration(seconds: 45),
     this.confirmTimeout = const Duration(seconds: 30),
+    this.confirmRadius = 15,
+    this.confirmFixes = 5,
+    this.confirmGap = const Duration(seconds: 6),
+    this.agreeingFixes = 2,
     this.movedDistance = 200,
     this.stopRadius = 30,
     this.resumeDistance = 50,
@@ -35,6 +40,8 @@ final class IncidentDetectionConfig {
     this.maxFixGap = const Duration(seconds: 60),
     this.steadyFixGap = const Duration(seconds: 30),
     this.stopAfterDeceleration = const Duration(seconds: 60),
+    this.queueCreeps = 2,
+    this.arrivalRadius = 150,
     this.signalLostAfter = const Duration(seconds: 60),
     this.suspendedGap = const Duration(seconds: 30),
   });
@@ -100,13 +107,34 @@ final class IncidentDetectionConfig {
   /// this window before the drop, so one wild reading cannot start it.
   final Duration sustainWindow;
 
-  /// The drop is reported only after staying stopped this long — a hard
-  /// brake that drives on is not an incident.
+  /// The drop is reported only after staying put this long — a hard brake
+  /// that drives on is not an incident — and then only when its evidence is
+  /// strong enough for high confidence.
   final Duration confirmStill;
 
-  /// Without readings for this long after the drop, it is dropped: missing
-  /// data is never treated as confirmation.
+  /// Weaker evidence must stay put this long before it is reported at all. A
+  /// hard brake for a red light shows the same GPS drop as a collision; what
+  /// tells them apart is that the light turns green. 45 s outlasts most
+  /// waits, and costs a real event 30 s.
+  final Duration confirmStillUnsure;
+
+  /// No fix for this long while waiting, and the drop is dropped: missing
+  /// data is never treated as confirmation. Counted from the last fix, not
+  /// from the drop.
   final Duration confirmTimeout;
+
+  /// "Staying put" (metres; or twice the fix's accuracy, if larger). A
+  /// stopped car's fixes wander a few metres; a queue crawls further.
+  final double confirmRadius;
+
+  /// Fixes needed while staying put, at most [confirmGap] apart, for high
+  /// confidence: with a fix every 2 s, 15 s gives about seven.
+  final int confirmFixes;
+  final Duration confirmGap;
+
+  /// Fixes in a row that must agree before the engine believes a change —
+  /// moving away, creeping, having set off. One reading can be a glitch.
+  final int agreeingFixes;
 
   // Prolonged stop.
 
@@ -134,9 +162,17 @@ final class IncidentDetectionConfig {
   /// (needed for medium).
   final Duration steadyFixGap;
 
-  /// A stop that begins within this time of a reported sudden deceleration
-  /// is high confidence (when its data is good).
+  /// A stop that begins within this time of a sudden deceleration of medium
+  /// or high confidence is high confidence (when its data is good).
   final Duration stopAfterDeceleration;
+
+  /// Inching forward this many times during a stop makes it a queue: low.
+  final int queueCreeps;
+
+  /// A stop this close (metres, plus the fix's accuracy) to the journey's
+  /// planned destination has arrived: low. The same reach Batch 15 uses for
+  /// "on the planned route".
+  final double arrivalRadius;
 
   // Tracking interruption.
 

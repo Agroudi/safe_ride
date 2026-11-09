@@ -16,10 +16,13 @@ import 'package:safe_ride/features/journeys/logic/states/journey_state.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/escalation_status.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_actions.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_facts.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_escalation_note.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_incident.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_map_button.dart';
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_notices.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_route_card.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_share_card.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_tracking.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/safety_notice_note.dart';
 import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
@@ -99,12 +102,19 @@ class _JourneyView extends StatelessWidget {
                     ),
                     Gap(20.fx),
                     if (journey.status == JourneyStatus.active) ...<Widget>[
+                      JourneyEscalationNote(journeyId: journey.id),
                       JourneyIncident(journeyId: journey.id),
                       const SafetyNoticeNote(),
                     ],
                     if (journey.status != JourneyStatus.planned) ...<Widget>[
                       EscalationStatus(journeyId: journey.id),
                       JourneyTracking(journey: journey),
+                      Gap(12.fx),
+                      JourneyMapButton(journey: journey),
+                      if (journey.status == JourneyStatus.active) ...<Widget>[
+                        Gap(12.fx),
+                        JourneyShareCard(journeyId: journey.id),
+                      ],
                       Gap(20.fx),
                     ],
                     InfoNote(text: context.tr('journeys.notTracked')),

@@ -20,6 +20,10 @@ class PlanJourneyCubit extends Cubit<PlanJourneyState> {
         origin: draft.origin,
         destination: draft.destination,
         departsAt: draft.departsAt,
+        originPlace: draft.originPlace,
+        destinationPlace: draft.destinationPlace,
+        plannedDistanceMeters: draft.plannedDistanceMeters,
+        plannedDurationSeconds: draft.plannedDurationSeconds,
       );
       if (!isClosed) emit(PlanJourneySaved(journey));
     } on JourneyFailure catch (e) {

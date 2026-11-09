@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
 import 'package:safe_ride/features/journeys/logic/states/journey_state.dart';
 
@@ -44,12 +45,20 @@ class JourneyCubit extends Cubit<JourneyState> {
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   }) => _settle(
     (String id) => _repository.update(
       id,
       origin: origin,
       destination: destination,
       departsAt: departsAt,
+      originPlace: originPlace,
+      destinationPlace: destinationPlace,
+      plannedDistanceMeters: plannedDistanceMeters,
+      plannedDurationSeconds: plannedDurationSeconds,
     ),
   );
 

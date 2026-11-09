@@ -10,6 +10,10 @@ abstract interface class LocationSource {
   /// the result. Only ever called from a tap.
   Future<LocationAccess> requestAccess();
 
+  /// One position, for choosing a place: not a subscription, no notice, and
+  /// nothing recorded. Null when the phone gives none in time.
+  Future<LocationFix?> current();
+
   /// On Android 13+, asks once for the permission that lets the
   /// recording's persistent notice show (without it Android keeps the notice
   /// out of the notification shade). Never asks twice; nothing elsewhere.

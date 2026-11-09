@@ -292,7 +292,7 @@ void main() {
     }
 
     walk(AppRouter.router.configuration.routes);
-    expect(routes, hasLength(27));
+    expect(routes, hasLength(35));
     for (final GoRoute route in routes) {
       expect(route.pageBuilder, isNotNull, reason: route.name);
       expect(route.builder, isNull, reason: route.name);

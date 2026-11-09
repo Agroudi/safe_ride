@@ -5,13 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/shared_widgets/link_tile.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/safety_feature_tile.dart';
 import 'package:safe_ride/core/shared_widgets/section_heading.dart';
 
-/// Home's safety features. Trusted Contacts and Safety Resources (the
-/// guide and emergency numbers) are built, so they open their screens; Journey
-/// Sharing needs an online service, so it stays a *Planned* tile — never a
-/// tap that leads nowhere.
+/// Home's safety features: Trusted Contacts, Safety Resources (the guide and
+/// emergency numbers) and sharing, each opening its screen.
 class HomeSafetySection extends StatelessWidget {
   const HomeSafetySection({super.key});
 
@@ -36,11 +33,11 @@ class HomeSafetySection extends StatelessWidget {
           onTap: () => context.goNamed(AppRoutes.safety),
         ),
         Gap(10.fx),
-        SafetyFeatureTile(
+        LinkTile(
           icon: Icons.share_location_rounded,
           title: context.tr('home.safety.sharing.title'),
           body: context.tr('home.safety.sharing.body'),
-          badge: context.tr('home.safety.planned'),
+          onTap: () => context.pushNamed(AppRoutes.shareLocation),
         ),
       ],
     );

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/constants/app_motion.dart';
@@ -21,6 +22,7 @@ import 'package:safe_ride/core/push/push_background.dart';
 import 'package:safe_ride/core/push/push_notifications.dart';
 import 'package:safe_ride/core/router/app_back_dispatcher.dart';
 import 'package:safe_ride/core/router/app_router.dart';
+import 'package:safe_ride/core/router/app_routes.dart';
 import 'package:safe_ride/core/theme/app_theme.dart';
 import 'package:safe_ride/core/theme/system_bars.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/safety_check_host.dart';
@@ -64,6 +66,7 @@ Future<void> main() async {
       // No `startLocale`: the saved choice wins, then the device language,
       // then the fallback — see `AppLocales`.
       path: AppLocales.translationsPath,
+      assetLoader: const AppAssetLoader(),
       // ⚠️ The package defaults this to `true`, which silently replaces the
       // CLDR plural rules with a zero/one/two/other match — Arabic's `few` and
       // `many` forms are then never read («٣ نموذج» instead of «٣ نماذج»).
@@ -123,6 +126,9 @@ class App extends StatelessWidget {
                               notifier: sl<AppNotifier>(),
                               // "Are you okay?" over every route too.
                               child: SafetyCheckHost(
+                                onHelp: () => AppRouter.router.pushNamed(
+                                  AppRoutes.safetyHelp,
+                                ),
                                 child: child ?? const SizedBox.shrink(),
                               ),
                             ),

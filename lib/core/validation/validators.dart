@@ -22,6 +22,7 @@ class Validators {
   static const int fullNameMax = 200;
   static const int placeMax = 120;
   static const int relationshipMax = 40;
+  static const int nicknameMax = 60;
   static const int phoneMinDigits = 7;
 
   static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$');
@@ -90,6 +91,11 @@ class Validators {
   String? relationship(String? value) =>
       (value ?? '').trim().length > relationshipMax
       ? 'validation.relationship'.tr()
+      : null;
+
+  /// Optional; at most [nicknameMax] characters.
+  String? nickname(String? value) => (value ?? '').trim().length > nicknameMax
+      ? _length('validation.maxLength', nicknameMax)
       : null;
 
   /// A journey's place, in the user's own words: present, 2 to [placeMax]

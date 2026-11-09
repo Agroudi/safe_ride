@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/notifications/app_notifier.dart';
@@ -74,6 +75,7 @@ Future<GoRouter> _pumpApp(
       startLocale: locale,
       saveLocale: false,
       path: AppLocales.translationsPath,
+      assetLoader: const AppAssetLoader(),
       child: Builder(
         builder: (BuildContext context) => MaterialApp.router(
           locale: context.locale,

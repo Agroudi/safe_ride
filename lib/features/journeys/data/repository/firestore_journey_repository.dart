@@ -8,6 +8,7 @@ import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_checklist.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
 
 /// [JourneyRepository] over Firestore: the signed-in account's journeys at
@@ -33,7 +34,7 @@ class FirestoreJourneyRepository implements JourneyRepository {
       db: _db,
       path: FirestorePaths.journeys,
       read: _model,
-      query: (Query<Map<String, dynamic>> q) =>
+      query: (Query<Map<String, dynamic>> q, String _) =>
           q.orderBy('createdAt', descending: true).limit(maxJourneys),
     );
   }
@@ -66,6 +67,10 @@ class FirestoreJourneyRepository implements JourneyRepository {
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   }) => _guard(() async {
     final DocumentReference<Map<String, dynamic>> doc = _journeys
         .ref(await _uid())
@@ -79,6 +84,10 @@ class FirestoreJourneyRepository implements JourneyRepository {
       departsAt: departsAt.toUtc(),
       createdAt: now,
       updatedAt: now,
+      originPlace: originPlace,
+      destinationPlace: destinationPlace,
+      plannedDistanceMeters: plannedDistanceMeters,
+      plannedDurationSeconds: plannedDurationSeconds,
     );
     await settle(
       doc.set(<String, Object?>{
@@ -88,6 +97,12 @@ class FirestoreJourneyRepository implements JourneyRepository {
         'status': JourneyStatus.planned.name,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        // A journey with no pins has none of these fields at all.
+        if (originPlace != null) 'originPlace': originPlace.toJson(),
+        if (destinationPlace != null)
+          'destinationPlace': destinationPlace.toJson(),
+        'plannedDistanceMeters': ?plannedDistanceMeters,
+        'plannedDurationSeconds': ?plannedDurationSeconds,
       }),
     );
     return journey;
@@ -99,6 +114,10 @@ class FirestoreJourneyRepository implements JourneyRepository {
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   }) => _change(
     id,
     from: const <JourneyStatus>{JourneyStatus.planned},
@@ -106,7 +125,18 @@ class FirestoreJourneyRepository implements JourneyRepository {
       origin: origin.trim(),
       destination: destination.trim(),
       departsAt: departsAt.toUtc(),
+      originPlace: originPlace,
+      destinationPlace: destinationPlace,
+      plannedDistanceMeters: plannedDistanceMeters,
+      plannedDurationSeconds: plannedDurationSeconds,
     ),
+    // A place typed over its pin loses the pin, and the old estimate with it.
+    fields: <String, Object?>{
+      'originPlace': originPlace?.toJson() ?? FieldValue.delete(),
+      'destinationPlace': destinationPlace?.toJson() ?? FieldValue.delete(),
+      'plannedDistanceMeters': plannedDistanceMeters ?? FieldValue.delete(),
+      'plannedDurationSeconds': plannedDurationSeconds ?? FieldValue.delete(),
+    },
   );
 
   @override
@@ -174,6 +204,7 @@ class FirestoreJourneyRepository implements JourneyRepository {
     String id,
     JourneyModel Function(JourneyModel) change, {
     required Set<JourneyStatus> from,
+    Map<String, Object?> fields = const <String, Object?>{},
   }) => _guard(() async {
     final JourneyModel changed = change(
       await _current(id, from),
@@ -185,6 +216,7 @@ class FirestoreJourneyRepository implements JourneyRepository {
         'departsAt': Timestamp.fromDate(changed.departsAt),
         'status': changed.status.name,
         'updatedAt': FieldValue.serverTimestamp(),
+        ...fields,
       }),
     );
     return changed;

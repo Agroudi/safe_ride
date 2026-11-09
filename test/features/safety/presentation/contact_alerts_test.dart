@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
@@ -24,8 +25,10 @@ import 'package:safe_ride/features/safety/presentation/pages/accept_invite_page.
 import 'package:safe_ride/features/safety/presentation/pages/received_alerts_page.dart';
 import 'package:safe_ride/features/safety/presentation/widgets/contact_alerts_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
 
 import '../invite_fakes.dart';
+import '../help_fakes.dart';
 
 class _Session implements SessionReader {
   _Session(this.uid);
@@ -76,7 +79,7 @@ void main() {
       ..registerFactory<ReceivedAlertsCubit>(
         () => ReceivedAlertsCubit(
           FirestoreReceivedAlertsRepository(db, _Session('omar')),
-          dialer,
+          CallLauncher(dialer, RecordingComposer()),
         ),
       );
   }
@@ -93,6 +96,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: ScreenUtilInit(
           designSize: const Size(AppDesign.width, AppDesign.height),
           builder: (BuildContext context, _) => MaterialApp(

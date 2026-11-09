@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
@@ -46,6 +47,7 @@ void main() {
   late FakeEscalations escalations;
   late EscalationSync sync;
   late AppNotifier notices;
+  int helpOpened = 0;
 
   Future<void> boot(String language) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
@@ -118,6 +120,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: ScreenUtilInit(
           designSize: const Size(AppDesign.width, AppDesign.height),
           builder: (BuildContext context, _) => MaterialApp(
@@ -134,7 +137,7 @@ void main() {
             localizationsDelegates: context.localizationDelegates,
             builder: (_, Widget? child) => NotificationHost(
               notifier: notices,
-              child: SafetyCheckHost(child: child!),
+              child: SafetyCheckHost(onHelp: () => helpOpened++, child: child!),
             ),
             home: const Scaffold(body: Center(child: Text('page'))),
           ),
@@ -247,6 +250,57 @@ void main() {
     await tester.tap(text('journeys.safetyCheck.noAnswer.close'));
     await tester.pump();
     expect(find.byType(SafetyCheckPrompt), findsNothing);
+    await finish(tester);
+  });
+
+  Future<void> timeOut(WidgetTester tester) async {
+    now = now.add(const Duration(seconds: 15));
+    timers.fireDue();
+    for (int i = 0; i < 3; i++) {
+      await tester.runAsync(() async {
+        await service.idle;
+        await sync.idle;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+    }
+  }
+
+  testWidgets('no answer, then "I\'m okay": closed, thanked, and the note '
+      'gone', (WidgetTester tester) async {
+    await boot('en');
+    await open(tester);
+    await timeOut(tester);
+    expect(text('journeys.safetyCheck.followUp.okay'), findsOneWidget);
+    expect(text('journeys.safetyCheck.followUp.help'), findsOneWidget);
+    expect(checks.all.single.stage, SafetyStage.awaitingUserAction);
+
+    await tester.tap(text('journeys.safetyCheck.followUp.okay'));
+    for (int i = 0; i < 3; i++) {
+      await tester.runAsync(() async {
+        await service.idle;
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+    }
+    expect(checks.all.single.stage, SafetyStage.resolved);
+    expect(find.byType(SafetyCheckPrompt), findsNothing);
+    expect(text('journeys.safetyCheck.thanks'), findsOneWidget);
+    await tester.pump(AppDurations.noticeLong);
+    await finish(tester);
+  });
+
+  testWidgets('no answer, then "Get help": the note closes, help opens, and '
+      'the escalation stays open', (WidgetTester tester) async {
+    await boot('en');
+    helpOpened = 0;
+    await open(tester);
+    await timeOut(tester);
+    await tester.tap(text('journeys.safetyCheck.followUp.help'));
+    await tester.pump();
+    expect(helpOpened, 1);
+    expect(find.byType(SafetyCheckPrompt), findsNothing);
+    expect(checks.all.single.stage, SafetyStage.awaitingUserAction);
     await finish(tester);
   });
 

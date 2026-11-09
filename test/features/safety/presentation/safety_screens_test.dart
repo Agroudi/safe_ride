@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
@@ -25,17 +26,28 @@ import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart
 import 'package:safe_ride/features/safety/data/models/contact_failure.dart';
 import 'package:safe_ride/features/safety/data/repository/firestore_trusted_contacts_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/logic/cubit/accept_connection_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/connections_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_form_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_invite_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_links_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contacts_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/emergency_cubit.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/contact_alerts_card.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/contact_fields.dart';
 import 'package:safe_ride/features/safety/data/repository/emergency_data_source.dart';
 import 'package:safe_ride/features/safety/data/repository/emergency_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/phone_dialer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
+import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_reach_cubit.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/contact_tile.dart';
 
+import '../../../core/safety/position_fakes.dart';
+import '../help_fakes.dart';
 import '../../../core/country/country_fakes.dart';
+import '../connection_fakes.dart';
 import '../invite_fakes.dart';
 
 /// Never opens anything: no test reaches a real dialer.
@@ -75,6 +87,8 @@ void main() {
   EasyLocalization.logger.enableBuildModes = [];
   late TrustedContactsRepository contacts;
   late AppNotifier notices;
+  late RecordingDialer dialer;
+  late RecordingComposer composer;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{'locale': 'en'});
@@ -87,11 +101,22 @@ void main() {
       _Session(),
     );
     notices = AppNotifier();
+    dialer = RecordingDialer();
+    composer = RecordingComposer();
     await sl.reset();
     sl
       ..registerSingleton<AppNotifier>(notices)
       ..registerSingleton<TrustedContactsRepository>(contacts)
+      ..registerFactory<ConnectionsCubit>(
+        () => ConnectionsCubit(connectionsFor(db, 'sara-uid')),
+      )
+      ..registerFactory<AcceptConnectionCubit>(
+        () => AcceptConnectionCubit(connectionsFor(db, 'sara-uid')),
+      )
       ..registerFactory<ContactsCubit>(() => ContactsCubit(contacts))
+      ..registerFactory<ContactReachCubit>(
+        () => ContactReachCubit(CallLauncher(dialer, composer)),
+      )
       ..registerFactory<ContactFormCubit>(() => ContactFormCubit(contacts))
       ..registerFactory<ContactLinksCubit>(
         () => ContactLinksCubit(FakeInvites()),
@@ -107,8 +132,11 @@ void main() {
         () => EmergencyCubit(
           MemoryCountryRepository('SA'),
           BundledEmergencyRepository(EmergencyDataSource()),
-          const _Dialer(),
+          CallLauncher(const _Dialer(), composer),
         ),
+      )
+      ..registerFactory<EmergencyLocationCubit>(
+        () => stillLocationCubit(FakePositionReader()),
       );
   });
   tearDown(sl.reset);
@@ -131,6 +159,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: BlocProvider<PreferencesCubit>.value(
           value: prefs,
           child: ScreenUtilInit(
@@ -158,6 +187,7 @@ void main() {
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await tester.ensureVisible(finder.last);
+    await tester.pumpAndSettle();
     await tester.tap(finder.last);
     await tester.pumpAndSettle();
   }
@@ -321,16 +351,101 @@ void main() {
     await tester.pumpAndSettle();
     expect(text('safety.entries.alerts.title'), findsNothing);
     expect(text('safety.entries.invite.title'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.textContaining("doesn't alert your contacts"),
+      200,
+    );
     expect(find.textContaining("doesn't alert your contacts"), findsOneWidget);
 
-    await contacts.add(fullName: 'Mona Saleh', phone: '+966551112222');
+    final TrustedContactModel mona = await contacts.add(
+      fullName: 'Mona Saleh',
+      phone: '+966551112222',
+    );
     router.pushNamed(AppRoutes.trustedContacts);
     await tester.pumpAndSettle();
     expect(find.text('Mona Saleh'), findsOneWidget);
     expect(text('safety.contacts.alertsOff'), findsNothing);
     expect(find.textContaining('send them anything'), findsOneWidget);
-    await tester.tap(find.text('Mona Saleh'));
+
+    // Opening the contact: the tap must land on the tile and open its edit
+    // screen, loaded, with no invite card while alerts are off.
+    await tester.ensureVisible(find.text('Mona Saleh'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Mona Saleh').hitTestable());
+    await tester.pumpAndSettle();
+    final GoRouterState opened = GoRouterState.of(
+      tester.element(find.byType(ContactFields)),
+    );
+    expect(opened.name, AppRoutes.editContact);
+    expect(opened.pathParameters['id'], mona.id);
+    expect(text('safety.contacts.form.editTitle'), findsOneWidget);
+    final Iterable<String> fields = tester
+        .widgetList<EditableText>(
+          find.descendant(
+            of: find.byType(ContactFields),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .map((EditableText f) => f.controller.text);
+    expect(fields, containsAll(<String>['Mona Saleh', '+966551112222']));
+    expect(text('safety.contacts.form.delete'), findsOneWidget);
+    expect(find.byType(ContactAlertsCard), findsNothing);
     expect(text('safety.invite.create'), findsNothing);
+  });
+
+  group('Batch 21: Call and Message on the Trusted Contacts list', () {
+    Future<void> openList(WidgetTester tester, String phone) async {
+      final GoRouter router = await pumpApp(tester);
+      await contacts.add(fullName: 'Mona Saleh', phone: phone);
+      router.pushNamed(AppRoutes.trustedContacts);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Mona Saleh'));
+      await tester.pumpAndSettle();
+    }
+
+    Finder onTile(Finder what) => find.descendant(
+      of: find.ancestor(
+        of: find.text('Mona Saleh'),
+        matching: find.byType(ContactTile),
+      ),
+      matching: what,
+    );
+
+    testWidgets('Call opens the phone app with the saved number, prepared', (
+      WidgetTester tester,
+    ) async {
+      await openList(tester, '+966 55 111 2222');
+      await tester.tap(onTile(text('safety.reach.call')));
+      await tester.pumpAndSettle();
+      expect(dialer.opened, <String>['+966551112222']);
+      expect(composer.composed, isEmpty);
+      expect(notices.current?.title, 'safety.emergency.dial.opened.title'.tr());
+      await tester.pump(AppDurations.noticeLong);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Message opens the messaging app empty: everyday use, no '
+        'emergency text, no location', (WidgetTester tester) async {
+      await openList(tester, '0551112222');
+      await tester.tap(onTile(text('safety.reach.message')));
+      await tester.pumpAndSettle();
+      expect(composer.composed, <(String, String)>[('0551112222', '')]);
+      expect(dialer.opened, isEmpty);
+      expect(notices.current?.title, 'safety.reach.compose.opened.title'.tr());
+      await tester.pump(AppDurations.noticeLong);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('the buttons are their own targets: tapping the contact still '
+        'opens it to edit', (WidgetTester tester) async {
+      await openList(tester, '0551112222');
+      expect(find.bySemanticsLabel('Call Mona Saleh'), findsOneWidget);
+      expect(find.bySemanticsLabel('Text Mona Saleh'), findsOneWidget);
+      await tester.tap(find.text('Mona Saleh'));
+      await tester.pumpAndSettle();
+      expect(text('safety.contacts.form.editTitle'), findsOneWidget);
+      expect(dialer.opened, isEmpty);
+      expect(composer.composed, isEmpty);
+    });
   });
 }

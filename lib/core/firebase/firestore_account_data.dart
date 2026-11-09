@@ -5,8 +5,11 @@ import 'package:safe_ride/core/account/account_data.dart';
 import 'package:safe_ride/core/firebase/firestore_paths.dart';
 
 /// Everything the phone may delete from `users/{uid}`, except the profile
-/// itself (the authentication repository's, last): journeys with their
-/// checklists, routes and summaries, contacts and devices.
+/// itself (the authentication repository's, last): every share with its
+/// public document and route, journeys with their checklists, routes and
+/// summaries, contacts and devices. Connections go first, in
+/// `FirestoreConnectionRepository.erase`: ending one writes to the other
+/// person's record, and the invites are top level.
 ///
 /// Firestore has no client-side recursive delete, so each path is listed
 /// here: **a new collection under `users/{uid}` needs a line**. Reads go to
@@ -44,8 +47,18 @@ class FirestoreAccountData implements AccountData {
     final List<DocumentReference<Map<String, dynamic>>> journeys = await _docs(
       FirestorePaths.journeys(uid),
     );
+    final List<DocumentReference<Map<String, dynamic>>> shares = await _docs(
+      FirestorePaths.shareRecords(uid),
+    );
     final List<DocumentReference<Map<String, dynamic>>> all =
         <DocumentReference<Map<String, dynamic>>>[
+          // First, and the public document before its record: a link must not
+          // outlive the account, and the record is what allows deleting it.
+          for (final DocumentReference<Map<String, dynamic>> s in shares) ...[
+            ...await _docs(FirestorePaths.shareRoute(s.id)),
+            _db.doc(FirestorePaths.share(s.id)),
+            s,
+          ],
           for (final DocumentReference<Map<String, dynamic>> j in journeys) ...[
             _db.doc(FirestorePaths.journeyChecklist(uid, j.id)),
             _db.doc(FirestorePaths.journeyTracking(uid, j.id)),

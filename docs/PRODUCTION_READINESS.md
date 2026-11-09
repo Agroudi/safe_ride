@@ -17,10 +17,13 @@ this project has been tested on a physical phone, and nothing on iOS at all.**
 |---|---|
 | Register, login, password reset, sign-out, session | Implemented; emulator-tested against the live project (batch 7) |
 | Profile, language, theme, Arabic RTL and English LTR | Implemented; emulator-tested |
-| **Account deletion** | Implemented; **unit-tested only** (fakes). Never run against live Firebase |
+| **Account deletion** | Implemented; run once on the Firebase emulators with the real rules (batch 17), on an account with connections and invites. Never run against live Firebase |
+| Connections between accounts | Implemented; emulator-tested with the real rules. Rules and invite page deployed 2026-11-05; no real invite on the live project yet |
 | Country selection | Implemented; emulator-tested, offline too |
-| Emergency numbers, 7 countries, offline | Implemented; emulator-tested. Checked against official sources 2026-11-03 |
-| Dialer (opens the phone app; the user presses call) | Implemented; emulator-tested with one number, no call placed |
+| Emergency numbers, 7 countries, offline | Implemented; emulator-tested. Re-checked 2026-11-08; Saudi 911 marked regional (`docs/emergency.md` §2) |
+| Dialer (opens the phone app; the user presses call) | Implemented; one `CallLauncher` for every Call (Batch 20). Emulator-tested with a test contact's number; no emergency number dialled, no call placed |
+| Calling and texting saved contacts (Batch 21) | Implemented; emulator-tested with test numbers and Google Messages. Nothing sent by SafeRide; connections still share no number |
+| Emergency directory, "Where you are", guidance (Batch 20) | Implemented; emulator-tested, offline too. The location is never sent |
 | Trusted contacts (the list) | Implemented; emulator-tested |
 | Journeys: plan, edit, cancel, complete | Implemented; emulator-tested |
 | Pre-journey checklist | Implemented; emulator-tested |
@@ -30,13 +33,38 @@ this project has been tested on a physical phone, and nothing on iOS at all.**
 | 15-second safety check, in the app | Implemented; emulator-tested |
 | Local safety notification | Implemented; the notification, countdown, timeout and action were emulator-tested through a temporary probe screen, not through a real safety check |
 | "I'm safe" from a notification, process killed | Same probe, emulator-only |
+| After no answer: follow-up, "I'm okay", Get help (Batch 19) | Implemented; emulator-tested in the foreground and through the background notification, with a real safety check on the Firebase emulators. Local only; nothing is sent |
 | Locked-screen safety confirmation | **Not verified.** Shows only if the phone's settings allow it |
 | Trusted-contact notifications | **Implemented but requires backend deployment. Off in this build; nothing is sent** |
 | Invite codes, "Alerts for you" | Implemented; needs the backend; hidden in this build |
 | Cloud Functions | Written; emulator-tested with a fake provider; **not deployed, by decision** |
 | FCM | Receiving end only. Nothing sends |
 | iOS | **Blocked by platform requirements**: never built |
-| Location sharing, SMS, email, automatic calls | Not implemented, by decision |
+| Maps: picking places, route preview, live map | Implemented; emulator-only with simulated movement, signed in on the Firebase emulators with the real rules; not yet on the live project (`docs/maps.md`) |
+| Location and journey sharing | Implemented and deployed; tested on the Firebase emulators, no real share yet on the live project (`docs/location-sharing.md`) |
+| SMS, email, automatic calls | Not implemented, by decision |
+
+Batch 21 added Call and Message for numbers the user saved, on Get help and
+the Trusted Contacts list: the user's own phone or messaging app opens, and
+the user calls or sends. A connection still shares no phone number
+(`docs/emergency.md` §10).
+
+Batch 20 made one emergency directory for Emergency information and Get help,
+re-checked the numbers, put every Call through one launcher, and added "Where
+you are" and what to say on the call (`docs/emergency.md`). SafeRide still
+calls nobody and sends no location.
+
+Batch 19 gave an unanswered check a follow-up: the record is kept on the phone
+until the user says "I'm okay" or the journey ends, and Get help lists the
+chosen country's emergency numbers, sharing, and the user's people, each the
+user's own tap (`docs/escalation.md` §11). It calls, sends and shares nothing.
+
+Batch 18 reworked movement detection to ask less often for ordinary driving
+(`docs/detection.md`); it has run on the emulator only, never in a vehicle.
+
+Batch 17 added connections between accounts (`docs/connections.md`): the rules and
+the invite page are tested on the emulators and were deployed on 2026-11-05. No real
+invite has run on the live project.
 
 ## 2. Known limitations
 
@@ -59,14 +87,12 @@ this project has been tested on a physical phone, and nothing on iOS at all.**
 | Item | Status |
 |---|---|
 | Cloud Functions | **Not deployed. Will not be, on Spark.** The code stays in `functions/` |
-| `firestore.rules` (Batches 13–14) | **Not deployed.** Live rules are Batch 10's |
+| `firestore.rules` (Batches 13–15) | **Deployed 2026-11-04**. A pinned journey was saved through the app against the same rules on the emulator, not yet on the live project. Clients can now create `safetyChecks` and `incidents` in their own account; nothing reads them on Spark |
+| `firestore.rules` (Batch 16, sharing) | **Deployed 2026-11-05**, read back identical to the repo |
+| `firestore.rules` (Batch 17, connections) and `hosting/c.html` | **Deployed 2026-11-05**, rules read back identical to the repo; signed-out access refused |
+| `hosting/` (web viewer) | **Deployed 2026-11-05** at `saferide-a9d9f.web.app/s` |
 | `firestore.indexes.json` | **Not deployed**; only the backend needs it |
 | Firebase Auth, Firestore, FCM setup | Live and unchanged |
-
-The undeployed rules change nothing a Spark build does: this build never touches
-the collections they add, and account deletion needs only what the live rules
-already allow. Deploying them is free and optional; it adds the closed rules
-for those collections, which today fall to the catch-all "refuse".
 
 ## 4. Firebase plan requirements
 
@@ -112,12 +138,17 @@ Remaining:
 |---|---|---|
 | Name, optional phone, language, country | Firestore; email in Firebase Auth | Account deletion |
 | Trusted contacts: a third party's name and number, unverified | Firestore | Removed, or account deletion |
+| Connections: the other person's name, and their account id | Firestore, one record per side | Cleared once ended, or account deletion. After the other person deletes their account, this side keeps their name until it is cleared |
+| Invites: the inviter's name and account id, readable with the token while open | Firestore | Cancelled, used then cleared by the next invite, or account deletion |
 | Journeys, checklists | Firestore | Account deletion |
 | Route points, precise | Phone, then Firestore | Phone copy deleted once synced; Firestore until account deletion |
 | Incidents, location rounded to ~11 m | Phone only | Closed ones 90 days, at most 100 |
 | Safety checks | Phone only | Finished ones 90 days, at most 50; unanswered ones until the cap or deletion |
 | Device record (FCM installation id) | Firestore | Sign-out or account deletion |
 | Escalation attempts | None in this build | n/a |
+| Picked places, route estimates | Firestore, in the journey | Account deletion |
+| Searches, pins, route ends, map area | Sent to map providers (`docs/maps.md` §5) | Their logs |
+| Shares (position, chosen journey details) | Firestore, public to the link's holder | Deleted when stopped; unreadable at `expiresAt`, cleared by the phone later (`docs/location-sharing.md` §11) |
 
 - **Account deletion** needs the password, deletes everything above from the
   account and the phone, then the sign-in. It stops the recording and any check
@@ -180,13 +211,21 @@ On at least one Samsung, one Xiaomi or Huawei, and one Pixel, then an iPhone:
 4. **Detection:** hard braking in a safe, empty place; traffic jams; red lights;
    fuel stops; parking. Count false alarms and misses. **Never stage a crash.**
 5. **Safety check:** the full flow in the app, screen on, screen off, locked,
-   Do Not Disturb, notifications off.
+   Do Not Disturb, notifications off; then the follow-up, Get help with a
+   **test** number in the dialer (never press call on a real one), and "I'm
+   okay" late.
 6. **"I'm safe" from a real notification,** in the last seconds of a countdown.
 7. **Offline:** airplane mode for a journey, then reconnect. Check route counts.
 8. **Account deletion against the live project** with a throwaway account, then
    confirm in the Firebase console that its documents and sign-in are gone.
 9. **Arabic RTL, large text, TalkBack and VoiceOver** on a real screen.
 10. **Release build** from a real keystore.
+11. **Call** on Android and iOS with a **non-emergency test number**: the phone
+    app opens with it, cancel returns to SafeRide; dual SIM, no SIM, a tablet.
+12. **"Where you are"** outdoors, indoors and with approximate permission.
+13. **Message** to a test number on Samsung, Pixel and Xiaomi (their default
+    messaging apps read the text differently) and an iPhone; Arabic text
+    arriving intact; nothing sent without a tap on send.
 
 Never contact real emergency services during any test.
 
@@ -204,6 +243,13 @@ Never contact real emergency services during any test.
 | 8 | Liability wording: review the safety copy with a lawyer before calling this a safety app in store text | Owner |
 | 9 | iOS: everything in §8, if iOS is in scope | Owner, with a Mac |
 | 10 | App Check (monitoring first) | Developer |
+| 11 | Replace the OSRM demo before any commercial release: it is "non-commercial" (`docs/maps.md` §6) | Owner |
+| 12 | Run the signed-in map flow once on the live project | Owner, with a test account |
+| 13 | Test a real link on a real phone, on the live project | Owner |
+| 14 | Add the release key's fingerprint to `hosting/.well-known/assetlinks.json` | Owner |
+| 15 | Describe sharing in the privacy policy: a bearer link, what recipients see, who else handles it | Owner |
+| 16 | With alerts on (Blaze), a late "I'm okay" must also retract an alert already sent; not built (`docs/escalation.md` §11) | Developer, after the plan decision |
+| 17 | Emergency numbers: re-check before release and on a schedule; confirm whether 999/998 still connect in Saudi Arabia's 911 regions (`docs/emergency.md` §2) | Owner |
 
 ## Appendix: state-transition audit
 
@@ -232,6 +278,8 @@ tests with fakes, not a device.
 | Tap after the deadline | Too late; the check stays timed out |
 | Failed write during a check | Looked at again in 5 s. Was: no timer until the next resume |
 | `escalationReady`, no backend | Stays on the phone; `serviceUnavailable`: nobody alerted, nothing to retry |
+| `escalationReady` → shown (Batch 19) | `presentedAt` once, only in the foreground; also when returning through the notification |
+| `escalationReady` → resolved (Batch 19) | Once, by a late "I'm okay" or the journey ending; never reopens; never synced |
 | Anything the server says, no backend | Ignored: never shown as sent |
 | Expired check | Called "no answer", never an accident |
 | Route file lost a point | Count corrected; sending ends. Was: an endless write loop that also blocked later journeys |

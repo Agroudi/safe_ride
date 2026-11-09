@@ -18,6 +18,14 @@ rules_version = '2';
 //   (escalations and their attempts, contact links, alerts received) is
 //   written by the backend only: no client can mark anything sent or
 //   delivered, or make itself someone's contact.
+// - A share's link is a bearer credential: its 256-bit token is the id of a
+//   public document anyone holding the link may read, one at a time, until it
+//   expires. Nobody can list them, and they hold no owner: rules cannot hide a
+//   field, so who owns a share is only ever in users/{uid}/shares/{token}.
+// - A connection between two accounts is made only by accepting an invite,
+//   in one write: the invite and both sides' records, which is the one time
+//   an account writes into another's. It grants nothing: no rule anywhere
+//   reads a connection to open a journey, a route, a location or a share.
 // - Anything not matched below is refused.
 //
 // Deploy: firebase deploy --only firestore:rules (see firebase.json).
@@ -66,16 +74,41 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
 
       match /journeys/{journeyId} {
+        // A place picked on the map. Optional: a journey needs only the
+        // user's own words, and every journey from before maps has none.
+        function validPlace(d, k) {
+          return !(k in d) || (
+            d[k] is map
+            && d[k].keys().hasOnly(['name', 'lat', 'lng', 'address', 'placeId'])
+            && d[k].keys().hasAll(['name', 'lat', 'lng'])
+            && text(d[k].name, 1, 200)
+            && d[k].lat is number && d[k].lat >= -90 && d[k].lat <= 90
+            && d[k].lng is number && d[k].lng >= -180 && d[k].lng <= 180
+            && optionalText(d[k], 'address', 1, 400)
+            && optionalText(d[k], 'placeId', 1, 100)
+          );
+        }
+
+        function validEstimate(d, k) {
+          return !(k in d) || (d[k] is number && d[k] >= 0);
+        }
+
         function validJourney(d) {
           return d.keys().hasOnly(['origin', 'destination', 'departsAt',
                                    'status', 'createdAt', 'updatedAt',
-                                   'startedAt'])
+                                   'startedAt', 'originPlace',
+                                   'destinationPlace', 'plannedDistanceMeters',
+                                   'plannedDurationSeconds'])
             && d.keys().hasAll(['origin', 'destination', 'departsAt',
                                 'status', 'createdAt', 'updatedAt'])
             && text(d.origin, 2, 120)
             && text(d.destination, 2, 120)
             && d.departsAt is timestamp
             && d.status in ['planned', 'active', 'completed', 'cancelled']
+            && validPlace(d, 'originPlace')
+            && validPlace(d, 'destinationPlace')
+            && validEstimate(d, 'plannedDistanceMeters')
+            && validEstimate(d, 'plannedDurationSeconds')
             && d.updatedAt == request.time;
         }
 
@@ -345,6 +378,119 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Which shares are this account's. This record is the proof of
+      // ownership the public document cannot carry, and what finds a share
+      // again from another phone or when the account is deleted. It holds the
+      // token, so it is the owner's alone.
+      match /shares/{token} {
+        function publicShare() {
+          return /databases/$(database)/documents/shares/$(token);
+        }
+
+        function validRecord(d) {
+          return d.keys().hasOnly(['kind', 'journeyId', 'createdAt', 'expiresAt'])
+            && d.keys().hasAll(['kind', 'createdAt', 'expiresAt'])
+            && ((d.kind == 'journey' && text(d.journeyId, 1, 128))
+                || (d.kind == 'location' && !('journeyId' in d)))
+            && d.expiresAt is timestamp;
+        }
+
+        allow read: if isOwner(uid);
+        // Only in the write that creates the public document: a token that
+        // already exists can never be claimed, leaked or not.
+        allow create: if isOwner(uid)
+          && token.matches('^[A-Za-z0-9_-]{43}$')
+          && validRecord(request.resource.data)
+          && request.resource.data.createdAt == request.time
+          && !exists(publicShare())
+          && existsAfter(publicShare());
+        allow update: if isOwner(uid)
+          && validRecord(request.resource.data)
+          && changedOnly(['expiresAt'])
+          && request.resource.data.expiresAt <= resource.data.expiresAt;
+        // Never before the public document: nothing could delete that after.
+        allow delete: if isOwner(uid) && !existsAfter(publicShare());
+      }
+
+      // Who this account is connected to: one record per side, so a nickname
+      // stays its owner's, and the id is the other account, so a pair exists
+      // once. Only the owner reads it. The other side can do one thing to it:
+      // end it. Nothing here opens anything else.
+      match /connections/{contactUid} {
+        function theirSide() {
+          return /databases/$(database)/documents/users/$(contactUid)/connections/$(uid);
+        }
+
+        function validConnection(d) {
+          return d.keys().hasOnly(['ownerUid', 'contactUid', 'contactName',
+                                   'status', 'inviteId', 'createdAt',
+                                   'acceptedAt', 'nickname', 'permissions',
+                                   'revokedAt', 'revokedBy'])
+            && d.keys().hasAll(['ownerUid', 'contactUid', 'contactName',
+                                'status', 'inviteId', 'createdAt', 'acceptedAt',
+                                'permissions'])
+            && d.ownerUid == uid
+            && d.contactUid == contactUid
+            && text(d.contactName, 2, 200)
+            && d.inviteId.matches('^[A-Za-z0-9_-]{43}$')
+            && optionalText(d, 'nickname', 1, 60)
+            // Nothing can be switched on: no backend exists to act on it.
+            && d.permissions == {'safetyAlerts': false};
+        }
+
+        // The write that accepts an invite, and only that write: `acceptedAt`
+        // equal to this request's time cannot be replayed. Each side's name is
+        // the one the other account really has, so nobody can pose as someone
+        // else.
+        function accepting(d) {
+          let invite = getAfter(/databases/$(database)/documents/connectionInvites/$(d.inviteId)).data;
+          return signedIn()
+            && validConnection(d)
+            && d.status == 'accepted'
+            && !d.keys().hasAny(['revokedAt', 'revokedBy', 'nickname'])
+            && invite.status == 'accepted'
+            && invite.acceptedBy == request.auth.uid
+            && invite.acceptedAt == request.time
+            && d.acceptedAt == request.time
+            && d.createdAt == invite.createdAt
+            && ((uid == request.auth.uid
+                  && contactUid == invite.inviterUid
+                  && d.contactName == invite.inviterName)
+                || (uid == invite.inviterUid
+                  && contactUid == request.auth.uid
+                  && d.contactName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.fullName));
+        }
+
+        function ending() {
+          return signedIn()
+            && (request.auth.uid == uid || request.auth.uid == contactUid)
+            && resource.data.status == 'accepted'
+            && request.resource.data.status == 'revoked'
+            && request.resource.data.revokedAt == request.time
+            && request.resource.data.revokedBy == request.auth.uid
+            && changedOnly(['status', 'revokedAt', 'revokedBy']);
+        }
+
+        function renaming() {
+          return isOwner(uid)
+            && resource.data.status == 'accepted'
+            && changedOnly(['nickname'])
+            && optionalText(request.resource.data, 'nickname', 1, 60);
+        }
+
+        allow read: if isOwner(uid);
+        allow create: if accepting(request.resource.data);
+        // An ended connection comes back only through a new invite.
+        allow update: if ending()
+          || renaming()
+          || (resource.data.status == 'revoked' && accepting(request.resource.data));
+        // Never leaving the other side believing it is still connected.
+        allow delete: if isOwner(uid)
+          && (resource.data.status == 'revoked'
+              || !existsAfter(theirSide())
+              || getAfter(theirSide()).data.status == 'revoked');
+      }
+
       // One per install that receives notifications: its FCM installation id.
       match /devices/{installId} {
         allow read, delete: if isOwner(uid);
@@ -355,6 +501,211 @@ service cloud.firestore {
           && request.resource.data.platform in ['android', 'ios']
           && request.resource.data.updatedAt == request.time;
       }
+    }
+
+    // What someone holding a share's link sees. The token is the document's
+    // id and the only way in: it reads one document, never a list, and only
+    // until `expiresAt`, checked here against the server's clock whether or
+    // not the owner's phone is running. Stopping a share deletes it.
+    match /shares/{token} {
+      function ownerRecord() {
+        return /databases/$(database)/documents/users/$(request.auth.uid)/shares/$(token);
+      }
+
+      function isShareOwner() {
+        return signedIn() && exists(ownerRecord());
+      }
+
+      function open(d) {
+        return d.expiresAt > request.time;
+      }
+
+      function validEnd(d, k) {
+        return !(k in d) || (
+          d[k] is map
+          && d[k].keys().hasOnly(['name', 'lat', 'lng'])
+          && d[k].keys().hasAll(['name'])
+          && text(d[k].name, 1, 120)
+          && (!('lat' in d[k]) || (d[k].lat is number && d[k].lat >= -90 && d[k].lat <= 90))
+          && (!('lng' in d[k]) || (d[k].lng is number && d[k].lng >= -180 && d[k].lng <= 180))
+        );
+      }
+
+      function validLocation(d) {
+        return !('location' in d) || (
+          d.location is map
+          && d.location.keys().hasOnly(['lat', 'lng', 'accuracy', 'fixAt'])
+          && d.location.keys().hasAll(['lat', 'lng', 'accuracy', 'fixAt'])
+          && d.location.lat is number && d.location.lat >= -90 && d.location.lat <= 90
+          && d.location.lng is number && d.location.lng >= -180 && d.location.lng <= 180
+          && d.location.accuracy is number
+          && d.location.accuracy > 0 && d.location.accuracy <= 50
+          && d.location.fixAt is timestamp
+        );
+      }
+
+      function validShare(d) {
+        return d.keys().hasOnly(['kind', 'createdAt', 'expiresAt', 'updatedAt',
+                                 'tracking', 'location', 'locationAt', 'origin',
+                                 'destination', 'journeyStatus',
+                                 'distanceMeters', 'routeChunks',
+                                 'routeVersion'])
+          && d.keys().hasAll(['kind', 'createdAt', 'expiresAt', 'updatedAt',
+                              'tracking', 'routeChunks', 'routeVersion'])
+          && d.kind in ['location', 'journey']
+          && d.expiresAt is timestamp
+          && d.tracking in ['waiting', 'live', 'paused', 'ended']
+          && validLocation(d)
+          && validEnd(d, 'origin')
+          && validEnd(d, 'destination')
+          && (!('journeyStatus' in d) || d.journeyStatus in ['active', 'finished'])
+          && (!('distanceMeters' in d)
+              || (d.distanceMeters is number && d.distanceMeters >= 0))
+          && d.routeChunks is int && d.routeChunks >= 0 && d.routeChunks <= 40
+          && d.routeVersion is int && d.routeVersion >= 0
+          // A share of a location says nothing about any journey.
+          && (d.kind == 'journey'
+              || !d.keys().hasAny(['origin', 'destination', 'journeyStatus',
+                                   'distanceMeters']))
+          && d.updatedAt == request.time;
+      }
+
+      // A position is stamped by the server as it arrives.
+      function stampedLocation() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['location', 'locationAt'])
+          || (!('location' in request.resource.data)
+              && !('locationAt' in request.resource.data))
+          || ('location' in request.resource.data
+              && request.resource.data.locationAt == request.time);
+      }
+
+      allow get: if open(resource.data);
+      allow list: if false;
+
+      // At most 12 hours: a share nobody stops still ends by itself.
+      allow create: if signedIn()
+        && token.matches('^[A-Za-z0-9_-]{43}$')
+        && existsAfter(ownerRecord())
+        && validShare(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.tracking == 'waiting'
+        && !('location' in request.resource.data)
+        && !('locationAt' in request.resource.data)
+        && request.resource.data.routeChunks == 0
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(12, 'h');
+
+      // Only while open, a finished journey's share never comes back, and the
+      // time can only be shortened.
+      allow update: if isShareOwner()
+        && open(resource.data)
+        && (!('journeyStatus' in resource.data) || resource.data.journeyStatus == 'active')
+        && validShare(request.resource.data)
+        && changedOnly(['updatedAt', 'tracking', 'location', 'locationAt',
+                        'journeyStatus', 'distanceMeters', 'routeChunks',
+                        'routeVersion', 'expiresAt'])
+        && request.resource.data.expiresAt <= resource.data.expiresAt
+        && stampedLocation();
+
+      // Stopping a share. Allowed after it expired too, so it can be cleared.
+      allow delete: if isShareOwner();
+
+      // The route so far, thinned, for a shared journey: `seg` keeps a gap in
+      // the recording a gap on the recipient's map. Read one chunk at a time,
+      // by number, from `routeChunks`; only the owner can list them.
+      match /route/{chunkId} {
+        function parent() {
+          return get(/databases/$(database)/documents/shares/$(token)).data;
+        }
+
+        function validPoint(p) {
+          return p is map
+            && p.keys().hasOnly(['lat', 'lng', 'seg'])
+            && p.keys().hasAll(['lat', 'lng', 'seg'])
+            && p.lat is number && p.lat >= -90 && p.lat <= 90
+            && p.lng is number && p.lng >= -180 && p.lng <= 180
+            && p.seg is int && p.seg >= 0;
+        }
+
+        // Rules cannot loop: the first and last points are checked, and the
+        // size is bounded.
+        function validChunk(d) {
+          return d.keys().hasOnly(['chunk', 'points', 'updatedAt'])
+            && d.keys().hasAll(['chunk', 'points', 'updatedAt'])
+            && chunkId.matches('^[0-9]{5}$')
+            && d.chunk is int && d.chunk == int(chunkId)
+            && d.chunk < 40
+            && d.points is list
+            && d.points.size() >= 1 && d.points.size() <= 200
+            && validPoint(d.points[0])
+            && validPoint(d.points[d.points.size() - 1])
+            && d.updatedAt == request.time;
+        }
+
+        allow get: if open(parent());
+        allow list: if isShareOwner();
+        allow create, update: if isShareOwner()
+          && parent().kind == 'journey'
+          && open(parent())
+          && validChunk(request.resource.data);
+        allow delete: if isShareOwner();
+      }
+    }
+
+    // An invitation to connect. The token is the id and the only way in. Only
+    // a signed-in account can read one, by its token, while it is unused and
+    // unexpired; it shows the inviter's name and account id, which accepting
+    // needs, and nothing else. It works once.
+    match /connectionInvites/{token} {
+      function openInvite(d) {
+        return d.status == 'pending' && d.expiresAt > request.time;
+      }
+
+      function connectionPath(owner, contact) {
+        return /databases/$(database)/documents/users/$(owner)/connections/$(contact);
+      }
+
+      function validInvite(d) {
+        return d.keys().hasOnly(['inviterUid', 'inviterName', 'status',
+                                 'createdAt', 'expiresAt'])
+          && d.keys().hasAll(['inviterUid', 'inviterName', 'status', 'createdAt',
+                              'expiresAt'])
+          && d.inviterUid == request.auth.uid
+          && d.inviterName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.fullName
+          && d.status == 'pending'
+          && d.createdAt == request.time
+          && d.expiresAt is timestamp
+          && d.expiresAt > request.time
+          // Three days, with an hour for a phone clock that runs fast.
+          && d.expiresAt <= request.time + duration.value(73, 'h');
+      }
+
+      allow get: if signedIn()
+        && (resource.data.inviterUid == request.auth.uid
+            || resource.data.get('acceptedBy', null) == request.auth.uid
+            || openInvite(resource.data));
+      // Only a query for one's own invites.
+      allow list: if signedIn() && resource.data.inviterUid == request.auth.uid;
+
+      allow create: if signedIn()
+        && token.matches('^[A-Za-z0-9_-]{43}$')
+        && validInvite(request.resource.data);
+
+      // Accepting: once, by someone else, with both records in the same write.
+      allow update: if signedIn()
+        && request.auth.uid != resource.data.inviterUid
+        && openInvite(resource.data)
+        && exists(/databases/$(database)/documents/users/$(resource.data.inviterUid))
+        && changedOnly(['status', 'acceptedBy', 'acceptedAt'])
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.acceptedBy == request.auth.uid
+        && request.resource.data.acceptedAt == request.time
+        && existsAfter(connectionPath(request.auth.uid, resource.data.inviterUid))
+        && existsAfter(connectionPath(resource.data.inviterUid, request.auth.uid));
+
+      // Cancelling, or clearing away one that is over.
+      allow delete: if signedIn() && resource.data.inviterUid == request.auth.uid;
     }
 
     // Everything else — `contactInvites` (backend only) and whatever later

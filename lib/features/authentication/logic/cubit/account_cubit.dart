@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:safe_ride/core/account/sign_out_step.dart';
 import 'package:safe_ride/core/push/push_notifications.dart';
 import 'package:safe_ride/features/authentication/data/models/auth_failure.dart';
 import 'package:safe_ride/features/authentication/data/models/user_model.dart';
@@ -11,12 +12,18 @@ import 'package:safe_ride/features/authentication/logic/states/account_state.dar
 /// out; reloads when the repository reports a change (an edit saved on the
 /// edit screen shows on the profile beneath it).
 ///
-/// Signing out forgets this install's push token first (the next account on
-/// the phone must not get the last one's notifications), then ends the
-/// session — and only that: the onboarding flag, the language and the theme
+/// Signing out runs [SignOutStep]s (an active share ends), forgets this
+/// install's push token (the next account on the phone must not get the last
+/// one's notifications), then ends the session — and only that: the onboarding
+/// flag, the language and the theme
 /// live elsewhere and are never touched here (CLAUDE.md §16).
 class AccountCubit extends Cubit<AccountState> {
-  AccountCubit(this._repository, this._device) : super(const AccountLoading()) {
+  AccountCubit(
+    this._repository,
+    this._device, {
+    List<SignOutStep> signOutSteps = const <SignOutStep>[],
+  }) : _signOutSteps = signOutSteps,
+       super(const AccountLoading()) {
     _subscription = _repository.changes.listen((_) {
       final AccountState now = state;
       if (now is AccountReady && !now.signingOut) load();
@@ -25,6 +32,7 @@ class AccountCubit extends Cubit<AccountState> {
 
   final AuthRepository _repository;
   final DeviceRegistration _device;
+  final List<SignOutStep> _signOutSteps;
   late final StreamSubscription<void> _subscription;
 
   Future<void> load() async {
@@ -48,6 +56,9 @@ class AccountCubit extends Cubit<AccountState> {
     if (current is AccountReady && current.signingOut) return;
     if (user != null) emit(AccountReady(user, signingOut: true));
     try {
+      for (final SignOutStep step in _signOutSteps) {
+        await step.beforeSignOut();
+      }
       await _device.unregister();
       await _repository.logout();
       if (!isClosed) emit(const AccountSignedOut());

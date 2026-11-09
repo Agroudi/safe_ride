@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:safe_ride/core/safety/escalation_gate.dart';
 import 'package:safe_ride/features/journeys/data/models/safety_check.dart';
 import 'package:safe_ride/features/journeys/data/repository/escalation_sync.dart';
 import 'package:safe_ride/features/journeys/data/repository/safety_check_service.dart';
@@ -45,7 +46,20 @@ class SafetyCheckCubit extends Cubit<SafetyCheckState> {
     return outcome;
   }
 
-  /// Closes the "no answer" note.
+  /// "I'm okay", after the deadline — once: taps while it is being recorded
+  /// do nothing.
+  Future<ResolveOutcome?> resolve() async {
+    final SafetyCheck? check = state.check;
+    if (check == null || state.confirming) return null;
+    emit(SafetyCheckState(check, confirming: true));
+    final ResolveOutcome outcome = await _service.resolveSafe(check.id);
+    if (!isClosed && state.confirming) {
+      emit(SafetyCheckState(_service.current));
+    }
+    return outcome;
+  }
+
+  /// Closes the "no answer" note; the escalation stays open.
   void acknowledge() => _service.acknowledge();
 
   @override

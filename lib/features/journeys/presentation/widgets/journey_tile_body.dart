@@ -4,7 +4,7 @@ import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_labels.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/journey_status_chip.dart';
+import 'package:safe_ride/core/shared_widgets/status_chip.dart';
 
 /// What a `JourneyTile` shows: the route glyph, where to (two lines at most),
 /// where from, the departure, and the status chip.
@@ -74,7 +74,7 @@ class JourneyTileBody extends StatelessWidget {
           ),
         ),
         Gap(8.fx),
-        JourneyStatusChip(label: statusLabel, color: statusColor),
+        StatusChip(label: statusLabel, color: statusColor),
       ],
     );
   }

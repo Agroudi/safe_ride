@@ -2,55 +2,39 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
-import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
-import 'package:safe_ride/core/router/app_routes.dart';
-import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
-import 'package:safe_ride/core/shared_widgets/app_primary_button.dart';
-import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
-import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart';
-import 'package:safe_ride/features/safety/data/repository/firestore_trusted_contacts_repository.dart';
+import 'package:safe_ride/features/safety/logic/cubit/connections_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_links_cubit.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_reach_cubit.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contacts_cubit.dart';
-import 'package:safe_ride/features/safety/logic/states/contacts_state.dart';
-import 'package:safe_ride/features/safety/presentation/widgets/contact_tile.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/connections_section.dart';
+import 'package:safe_ride/features/safety/presentation/widgets/saved_contacts_section.dart';
 
-/// The account's trusted contacts, alphabetical, with Add. A contact opens
-/// to edit or delete. The screen says plainly what SafeRide does not do with
-/// them.
+/// The people the user trusts: accounts connected by an invite, then the
+/// numbers kept for themselves. The screen says plainly what neither one does.
 class TrustedContactsPage extends StatelessWidget {
   const TrustedContactsPage({super.key});
 
   @override
   Widget build(BuildContext context) => MultiBlocProvider(
     providers: <BlocProvider<dynamic>>[
+      BlocProvider<ConnectionsCubit>(
+        create: (_) => sl<ConnectionsCubit>()..load(),
+      ),
       BlocProvider<ContactsCubit>(create: (_) => sl<ContactsCubit>()..load()),
+      BlocProvider<ContactReachCubit>(create: (_) => sl<ContactReachCubit>()),
       if (AppFeatures.contactAlerts)
         BlocProvider<ContactLinksCubit>(
           create: (_) => sl<ContactLinksCubit>()..load(),
         ),
     ],
-    child: const _TrustedContactsView(),
-  );
-}
-
-class _TrustedContactsView extends StatelessWidget {
-  const _TrustedContactsView();
-
-  @override
-  Widget build(BuildContext context) {
-    void add() => context.pushNamed(AppRoutes.addContact);
-    final Map<String, String>? links = AppFeatures.contactAlerts
-        ? context.watch<ContactLinksCubit>().state
-        : null;
-
-    return Scaffold(
+    child: Scaffold(
       body: SafeArea(
-        child: BlocBuilder<ContactsCubit, ContactsState>(
-          builder: (BuildContext context, ContactsState state) => ListView(
+        child: Builder(
+          builder: (BuildContext context) => ListView(
             padding: EdgeInsetsDirectional.fromSTEB(
               AppSpacing.screenSide,
               AppSpacing.screenTop,
@@ -59,68 +43,14 @@ class _TrustedContactsView extends StatelessWidget {
             ),
             children: <Widget>[
               TitleBar(title: context.tr('safety.contacts.title')),
-              Gap(16.fx),
-              InfoNote(text: context.tr('safety.contacts.notice')),
               Gap(20.fx),
-              switch (state) {
-                ContactsLoading() => SizedBox(
-                  height: 120.fx,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                ContactsFailed() => AppEmptyState(
-                  icon: Icons.error_outline_rounded,
-                  title: context.tr('safety.contacts.failed.title'),
-                  body: context.tr('safety.contacts.failed.body'),
-                  actionLabel: context.tr('safety.contacts.failed.retry'),
-                  onAction: context.read<ContactsCubit>().load,
-                ),
-                ContactsReady(:final List<TrustedContactModel> contacts)
-                    when contacts.isEmpty =>
-                  AppEmptyState(
-                    icon: Icons.group_add_rounded,
-                    title: context.tr('safety.contacts.empty.title'),
-                    body: context.tr('safety.contacts.empty.body'),
-                    actionLabel: context.tr('safety.contacts.add'),
-                    onAction: add,
-                  ),
-                ContactsReady(:final List<TrustedContactModel> contacts) =>
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 10.fx,
-                    children: <Widget>[
-                      for (final TrustedContactModel c in contacts)
-                        ContactTile(
-                          key: ValueKey<String>(c.id),
-                          name: c.fullName,
-                          phone: c.phone,
-                          relationship: c.relationship,
-                          alerts: links == null
-                              ? null
-                              : context.tr(
-                                  links[c.id] ==
-                                          FirestoreTrustedContactsRepository.digitsOf(
-                                            c.phone,
-                                          )
-                                      ? 'safety.contacts.alertsOn'
-                                      : 'safety.contacts.alertsOff',
-                                ),
-                          onTap: () => context.pushNamed(
-                            AppRoutes.editContact,
-                            pathParameters: <String, String>{'id': c.id},
-                          ),
-                        ),
-                      Gap(10.fx),
-                      AppPrimaryButton(
-                        label: context.tr('safety.contacts.add'),
-                        onPressed: add,
-                      ),
-                    ],
-                  ),
-              },
+              const ConnectionsSection(),
+              Gap(28.fx),
+              const SavedContactsSection(),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

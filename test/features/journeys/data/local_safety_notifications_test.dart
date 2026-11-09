@@ -116,6 +116,29 @@ void main() {
     expect(safe['showsUserInterface'], isFalse);
   });
 
+  test(
+    'asking is not showing: refused notifications post nothing, and say so',
+    () async {
+      enabled = false;
+      expect(await notices.asking(check()), isFalse);
+      expect(await notices.noAnswer(check()), isFalse);
+      expect(calls.where((MethodCall c) => c.method == 'show'), isEmpty);
+    },
+  );
+
+  test('a question posted says so; the same id every time', () async {
+    expect(await notices.asking(check()), isTrue);
+    expect(await notices.asking(check()), isTrue);
+    final List<MethodCall> shows = calls
+        .where((MethodCall c) => c.method == 'show')
+        .toList();
+    expect(shows, hasLength(2));
+    expect(
+      shows.map((MethodCall c) => (c.arguments as Map<Object?, Object?>)['id']),
+      <Object?>[7001, 7001],
+    );
+  });
+
   test('nothing is posted for a deadline already gone', () async {
     final DateTime past = DateTime.now().toUtc().subtract(
       const Duration(seconds: 1),
@@ -125,8 +148,9 @@ void main() {
   });
 
   test('"no answer" replaces it: same id, no countdown, no action', () async {
-    await notices.noAnswer();
+    expect(await notices.noAnswer(check()), isTrue);
     expect(shown()['id'], 7001);
+    expect(shown()['payload'], 'e1-check', reason: 'a tap opens that check');
     final Map<Object?, Object?> a = android();
     expect(a['usesChronometer'], isFalse);
     expect(a['timeoutAfter'], isNull);
@@ -171,5 +195,7 @@ void main() {
       },
     ];
     expect(await notices.access(), SafetyNoticeAccess.blocked);
+    expect(await notices.asking(check()), isFalse, reason: 'nothing shown');
+    expect(calls.where((MethodCall c) => c.method == 'show'), isEmpty);
   });
 }

@@ -73,6 +73,8 @@ class EscalationSync {
     if (uid == null) return;
     for (final SafetyCheck c in await _checks.forUser(uid)) {
       if (c.status != SafetyCheckStatus.escalationReady ||
+          // The user said they are okay before it was sent: nothing to send.
+          c.resolvedAt != null ||
           c.escalationSyncedAt != null ||
           _sent.contains(c.id)) {
         continue;

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- The app looks for this before it offers an invite: see ConnectionLinkCheck. -->
+    <meta name="saferide-invite-page" content="1" />
+    <title>SafeRide</title>
+    <link rel="stylesheet" href="invite.css" />
+  </head>
+  <body>
+    <main>
+      <section lang="en" dir="ltr">
+        <h1>You've been invited to connect on SafeRide</h1>
+        <p>
+          An invite is answered in the SafeRide app, with your account. Nothing
+          happens on this page, and it reads nothing about anyone.
+        </p>
+        <ol>
+          <li>Copy this invite.</li>
+          <li>Open SafeRide, then Safety, then Trusted Contacts.</li>
+          <li>Choose "I have an invite" and paste it.</li>
+        </ol>
+      </section>
+      <section lang="ar" dir="rtl">
+        <h1>تلقّيت دعوة للارتباط على SafeRide</h1>
+        <p>
+          يُرَدّ على الدعوة من تطبيق SafeRide وبحسابك. لا يحدث شيء في هذه الصفحة،
+          ولا تقرأ أي بيانات عن أي شخص.
+        </p>
+        <ol>
+          <li>انسخ هذه الدعوة.</li>
+          <li>افتح SafeRide، ثم السلامة، ثم جهات الاتصال الموثوقة.</li>
+          <li>اختر «لديّ دعوة» والصقها.</li>
+        </ol>
+      </section>
+      <button id="copy" type="button" hidden>
+        <span lang="en">Copy invite</span> · <span lang="ar">نسخ الدعوة</span>
+      </button>
+      <p id="copied" role="status" hidden>
+        <span lang="en">Copied</span> · <span lang="ar">تم النسخ</span>
+      </p>
+    </main>
+    <script src="invite.js"></script>
+  </body>
+</html>

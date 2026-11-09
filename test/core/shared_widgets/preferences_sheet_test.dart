@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/preferences/app_preferences.dart';
@@ -228,6 +229,7 @@ class _Harness extends StatelessWidget {
       supportedLocales: AppLocales.supported,
       fallbackLocale: AppLocales.fallback,
       path: AppLocales.translationsPath,
+      assetLoader: const AppAssetLoader(),
       ignorePluralRules: false,
       child: ScreenUtilInit(
         designSize: const Size(AppDesign.width, AppDesign.height),

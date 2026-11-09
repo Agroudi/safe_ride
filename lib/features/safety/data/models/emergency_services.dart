@@ -64,6 +64,7 @@ final class EmergencyService extends Equatable {
     required this.verification,
     required this.sourceIds,
     this.note,
+    this.regional = false,
   });
 
   final List<EmergencyServiceType> types;
@@ -76,6 +77,10 @@ final class EmergencyService extends Equatable {
   /// Where it applies, when not everywhere.
   final LocalizedText? note;
 
+  /// Answers only in some regions (`"scope": "regional"`); [note] names
+  /// them. Never offered as the number for a service elsewhere.
+  final bool regional;
+
   @override
   List<Object?> get props => <Object?>[
     types,
@@ -83,6 +88,7 @@ final class EmergencyService extends Equatable {
     verification,
     sourceIds,
     note,
+    regional,
   ];
 }
 

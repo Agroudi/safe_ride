@@ -5,6 +5,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
+import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/router/app_routes.dart';
@@ -18,6 +19,7 @@ import 'package:safe_ride/features/journeys/presentation/widgets/journey_facts.d
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_notices.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_route_card.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/map_labels.dart';
 
 /// The last step before a journey exists: the places and the departure as
 /// they will be saved. Confirm saves it as *Planned* and opens its details (home stays
@@ -97,6 +99,20 @@ class _ReviewJourneyView extends StatelessWidget {
                     to: draft.destination.trim(),
                     trailing: JourneyDeparture(departsAt: draft.departsAt),
                   ),
+                  if (draft.plannedDistanceMeters case final double metres)
+                    Padding(
+                      padding: EdgeInsets.only(top: 12.fx),
+                      child: Text(
+                        MapLabels.routeSummary(
+                          context,
+                          metres: metres,
+                          seconds: draft.plannedDurationSeconds,
+                        ),
+                        style: context.texts.bodySmall?.copyWith(
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ),
                   Gap(20.fx),
                   InfoNote(text: context.tr('journeys.notTracked')),
                   Gap(28.fx),

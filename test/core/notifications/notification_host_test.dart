@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/notifications/app_notification.dart';
@@ -45,6 +46,7 @@ void main() {
         startLocale: locale,
         saveLocale: false,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: ScreenUtilInit(
           designSize: const Size(AppDesign.width, AppDesign.height),
           builder: (BuildContext context, _) => MaterialApp(

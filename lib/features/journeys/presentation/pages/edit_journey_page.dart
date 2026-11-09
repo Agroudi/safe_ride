@@ -10,11 +10,12 @@ import 'package:safe_ride/core/shared_widgets/app_primary_button.dart';
 import 'package:safe_ride/core/shared_widgets/form_scaffold.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/planned_route.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/states/journey_state.dart';
 import 'package:safe_ride/features/journeys/logic/states/journeys_state.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/journey_form.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_planner.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_notices.dart';
 import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
 
@@ -53,6 +54,7 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
   DateTime? _stored;
   bool _filled = false;
   bool _saving = false;
+  PlannedPlaces _places = (origin: null, destination: null, route: null);
 
   @override
   void dispose() {
@@ -92,6 +94,10 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
       origin: _from.text,
       destination: _to.text,
       departsAt: departs.toUtc(),
+      originPlace: _places.origin,
+      destinationPlace: _places.destination,
+      plannedDistanceMeters: _places.route?.distanceMeters,
+      plannedDurationSeconds: _places.route?.durationSeconds,
     );
   }
 
@@ -128,7 +134,7 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
                 body: context.tr('journeys.notTracked'),
               )
             else ...<Widget>[
-              JourneyForm(
+              JourneyPlanner(
                 from: _from,
                 to: _to,
                 departsAt: _departsAt,
@@ -137,6 +143,9 @@ class _EditJourneyViewState extends State<_EditJourneyView> {
                 past: all is JourneysReady
                     ? all.journeys
                     : const <JourneyModel>[],
+                originPlace: journey.originPlace,
+                destinationPlace: journey.destinationPlace,
+                onPlaces: (PlannedPlaces p) => _places = p,
               ),
               Gap(28.fx),
               AppPrimaryButton(

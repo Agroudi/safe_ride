@@ -19,7 +19,9 @@ mixin _$JourneyModel {
 @TimestampConverter() DateTime get departsAt;/// UTC; set by the server when the journey is saved.
 @TimestampConverter() DateTime get createdAt;/// UTC; the last change (an edit or a status), set by the server.
 @TimestampConverter() DateTime get updatedAt;/// UTC; when the user started it, set by the server. Null until then.
-@NullableTimestampConverter() DateTime? get startedAt;
+@NullableTimestampConverter() DateTime? get startedAt;/// Where the journey starts and ends, when picked on the map.
+@JourneyPlaceConverter() JourneyPlace? get originPlace;@JourneyPlaceConverter() JourneyPlace? get destinationPlace;/// The routing provider's estimate when it was planned, if it had one.
+ double? get plannedDistanceMeters; double? get plannedDurationSeconds;
 /// Create a copy of JourneyModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,16 +34,16 @@ $JourneyModelCopyWith<JourneyModel> get copyWith => _$JourneyModelCopyWithImpl<J
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is JourneyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.destination, destination) || other.destination == destination)&&(identical(other.status, status) || other.status == status)&&(identical(other.departsAt, departsAt) || other.departsAt == departsAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is JourneyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.destination, destination) || other.destination == destination)&&(identical(other.status, status) || other.status == status)&&(identical(other.departsAt, departsAt) || other.departsAt == departsAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.originPlace, originPlace) || other.originPlace == originPlace)&&(identical(other.destinationPlace, destinationPlace) || other.destinationPlace == destinationPlace)&&(identical(other.plannedDistanceMeters, plannedDistanceMeters) || other.plannedDistanceMeters == plannedDistanceMeters)&&(identical(other.plannedDurationSeconds, plannedDurationSeconds) || other.plannedDurationSeconds == plannedDurationSeconds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,origin,destination,status,departsAt,createdAt,updatedAt,startedAt);
+int get hashCode => Object.hash(runtimeType,id,origin,destination,status,departsAt,createdAt,updatedAt,startedAt,originPlace,destinationPlace,plannedDistanceMeters,plannedDurationSeconds);
 
 @override
 String toString() {
-  return 'JourneyModel(id: $id, origin: $origin, destination: $destination, status: $status, departsAt: $departsAt, createdAt: $createdAt, updatedAt: $updatedAt, startedAt: $startedAt)';
+  return 'JourneyModel(id: $id, origin: $origin, destination: $destination, status: $status, departsAt: $departsAt, createdAt: $createdAt, updatedAt: $updatedAt, startedAt: $startedAt, originPlace: $originPlace, destinationPlace: $destinationPlace, plannedDistanceMeters: $plannedDistanceMeters, plannedDurationSeconds: $plannedDurationSeconds)';
 }
 
 
@@ -52,11 +54,11 @@ abstract mixin class $JourneyModelCopyWith<$Res>  {
   factory $JourneyModelCopyWith(JourneyModel value, $Res Function(JourneyModel) _then) = _$JourneyModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String origin, String destination, JourneyStatus status,@TimestampConverter() DateTime departsAt,@TimestampConverter() DateTime createdAt,@TimestampConverter() DateTime updatedAt,@NullableTimestampConverter() DateTime? startedAt
+ String id, String origin, String destination, JourneyStatus status,@TimestampConverter() DateTime departsAt,@TimestampConverter() DateTime createdAt,@TimestampConverter() DateTime updatedAt,@NullableTimestampConverter() DateTime? startedAt,@JourneyPlaceConverter() JourneyPlace? originPlace,@JourneyPlaceConverter() JourneyPlace? destinationPlace, double? plannedDistanceMeters, double? plannedDurationSeconds
 });
 
 
-
+$JourneyPlaceCopyWith<$Res>? get originPlace;$JourneyPlaceCopyWith<$Res>? get destinationPlace;
 
 }
 /// @nodoc
@@ -69,7 +71,7 @@ class _$JourneyModelCopyWithImpl<$Res>
 
 /// Create a copy of JourneyModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? origin = null,Object? destination = null,Object? status = null,Object? departsAt = null,Object? createdAt = null,Object? updatedAt = null,Object? startedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? origin = null,Object? destination = null,Object? status = null,Object? departsAt = null,Object? createdAt = null,Object? updatedAt = null,Object? startedAt = freezed,Object? originPlace = freezed,Object? destinationPlace = freezed,Object? plannedDistanceMeters = freezed,Object? plannedDurationSeconds = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,origin: null == origin ? _self.origin : origin // ignore: cast_nullable_to_non_nullable
@@ -79,10 +81,38 @@ as JourneyStatus,departsAt: null == departsAt ? _self.departsAt : departsAt // i
 as DateTime,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,originPlace: freezed == originPlace ? _self.originPlace : originPlace // ignore: cast_nullable_to_non_nullable
+as JourneyPlace?,destinationPlace: freezed == destinationPlace ? _self.destinationPlace : destinationPlace // ignore: cast_nullable_to_non_nullable
+as JourneyPlace?,plannedDistanceMeters: freezed == plannedDistanceMeters ? _self.plannedDistanceMeters : plannedDistanceMeters // ignore: cast_nullable_to_non_nullable
+as double?,plannedDurationSeconds: freezed == plannedDurationSeconds ? _self.plannedDurationSeconds : plannedDurationSeconds // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
+/// Create a copy of JourneyModel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$JourneyPlaceCopyWith<$Res>? get originPlace {
+    if (_self.originPlace == null) {
+    return null;
+  }
 
+  return $JourneyPlaceCopyWith<$Res>(_self.originPlace!, (value) {
+    return _then(_self.copyWith(originPlace: value));
+  });
+}/// Create a copy of JourneyModel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$JourneyPlaceCopyWith<$Res>? get destinationPlace {
+    if (_self.destinationPlace == null) {
+    return null;
+  }
+
+  return $JourneyPlaceCopyWith<$Res>(_self.destinationPlace!, (value) {
+    return _then(_self.copyWith(destinationPlace: value));
+  });
+}
 }
 
 
@@ -164,10 +194,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt, @JourneyPlaceConverter()  JourneyPlace? originPlace, @JourneyPlaceConverter()  JourneyPlace? destinationPlace,  double? plannedDistanceMeters,  double? plannedDurationSeconds)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _JourneyModel() when $default != null:
-return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt);case _:
+return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt,_that.originPlace,_that.destinationPlace,_that.plannedDistanceMeters,_that.plannedDurationSeconds);case _:
   return orElse();
 
 }
@@ -185,10 +215,10 @@ return $default(_that.id,_that.origin,_that.destination,_that.status,_that.depar
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt, @JourneyPlaceConverter()  JourneyPlace? originPlace, @JourneyPlaceConverter()  JourneyPlace? destinationPlace,  double? plannedDistanceMeters,  double? plannedDurationSeconds)  $default,) {final _that = this;
 switch (_that) {
 case _JourneyModel():
-return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt);case _:
+return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt,_that.originPlace,_that.destinationPlace,_that.plannedDistanceMeters,_that.plannedDurationSeconds);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +235,10 @@ return $default(_that.id,_that.origin,_that.destination,_that.status,_that.depar
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String origin,  String destination,  JourneyStatus status, @TimestampConverter()  DateTime departsAt, @TimestampConverter()  DateTime createdAt, @TimestampConverter()  DateTime updatedAt, @NullableTimestampConverter()  DateTime? startedAt, @JourneyPlaceConverter()  JourneyPlace? originPlace, @JourneyPlaceConverter()  JourneyPlace? destinationPlace,  double? plannedDistanceMeters,  double? plannedDurationSeconds)?  $default,) {final _that = this;
 switch (_that) {
 case _JourneyModel() when $default != null:
-return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt);case _:
+return $default(_that.id,_that.origin,_that.destination,_that.status,_that.departsAt,_that.createdAt,_that.updatedAt,_that.startedAt,_that.originPlace,_that.destinationPlace,_that.plannedDistanceMeters,_that.plannedDurationSeconds);case _:
   return null;
 
 }
@@ -220,7 +250,7 @@ return $default(_that.id,_that.origin,_that.destination,_that.status,_that.depar
 @JsonSerializable()
 
 class _JourneyModel implements JourneyModel {
-  const _JourneyModel({required this.id, required this.origin, required this.destination, required this.status, @TimestampConverter() required this.departsAt, @TimestampConverter() required this.createdAt, @TimestampConverter() required this.updatedAt, @NullableTimestampConverter() this.startedAt});
+  const _JourneyModel({required this.id, required this.origin, required this.destination, required this.status, @TimestampConverter() required this.departsAt, @TimestampConverter() required this.createdAt, @TimestampConverter() required this.updatedAt, @NullableTimestampConverter() this.startedAt, @JourneyPlaceConverter() this.originPlace, @JourneyPlaceConverter() this.destinationPlace, this.plannedDistanceMeters, this.plannedDurationSeconds});
   factory _JourneyModel.fromJson(Map<String, dynamic> json) => _$JourneyModelFromJson(json);
 
 @override final  String id;
@@ -235,6 +265,12 @@ class _JourneyModel implements JourneyModel {
 @override@TimestampConverter() final  DateTime updatedAt;
 /// UTC; when the user started it, set by the server. Null until then.
 @override@NullableTimestampConverter() final  DateTime? startedAt;
+/// Where the journey starts and ends, when picked on the map.
+@override@JourneyPlaceConverter() final  JourneyPlace? originPlace;
+@override@JourneyPlaceConverter() final  JourneyPlace? destinationPlace;
+/// The routing provider's estimate when it was planned, if it had one.
+@override final  double? plannedDistanceMeters;
+@override final  double? plannedDurationSeconds;
 
 /// Create a copy of JourneyModel
 /// with the given fields replaced by the non-null parameter values.
@@ -249,16 +285,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JourneyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.destination, destination) || other.destination == destination)&&(identical(other.status, status) || other.status == status)&&(identical(other.departsAt, departsAt) || other.departsAt == departsAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JourneyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.destination, destination) || other.destination == destination)&&(identical(other.status, status) || other.status == status)&&(identical(other.departsAt, departsAt) || other.departsAt == departsAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.originPlace, originPlace) || other.originPlace == originPlace)&&(identical(other.destinationPlace, destinationPlace) || other.destinationPlace == destinationPlace)&&(identical(other.plannedDistanceMeters, plannedDistanceMeters) || other.plannedDistanceMeters == plannedDistanceMeters)&&(identical(other.plannedDurationSeconds, plannedDurationSeconds) || other.plannedDurationSeconds == plannedDurationSeconds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,origin,destination,status,departsAt,createdAt,updatedAt,startedAt);
+int get hashCode => Object.hash(runtimeType,id,origin,destination,status,departsAt,createdAt,updatedAt,startedAt,originPlace,destinationPlace,plannedDistanceMeters,plannedDurationSeconds);
 
 @override
 String toString() {
-  return 'JourneyModel(id: $id, origin: $origin, destination: $destination, status: $status, departsAt: $departsAt, createdAt: $createdAt, updatedAt: $updatedAt, startedAt: $startedAt)';
+  return 'JourneyModel(id: $id, origin: $origin, destination: $destination, status: $status, departsAt: $departsAt, createdAt: $createdAt, updatedAt: $updatedAt, startedAt: $startedAt, originPlace: $originPlace, destinationPlace: $destinationPlace, plannedDistanceMeters: $plannedDistanceMeters, plannedDurationSeconds: $plannedDurationSeconds)';
 }
 
 
@@ -269,11 +305,11 @@ abstract mixin class _$JourneyModelCopyWith<$Res> implements $JourneyModelCopyWi
   factory _$JourneyModelCopyWith(_JourneyModel value, $Res Function(_JourneyModel) _then) = __$JourneyModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String origin, String destination, JourneyStatus status,@TimestampConverter() DateTime departsAt,@TimestampConverter() DateTime createdAt,@TimestampConverter() DateTime updatedAt,@NullableTimestampConverter() DateTime? startedAt
+ String id, String origin, String destination, JourneyStatus status,@TimestampConverter() DateTime departsAt,@TimestampConverter() DateTime createdAt,@TimestampConverter() DateTime updatedAt,@NullableTimestampConverter() DateTime? startedAt,@JourneyPlaceConverter() JourneyPlace? originPlace,@JourneyPlaceConverter() JourneyPlace? destinationPlace, double? plannedDistanceMeters, double? plannedDurationSeconds
 });
 
 
-
+@override $JourneyPlaceCopyWith<$Res>? get originPlace;@override $JourneyPlaceCopyWith<$Res>? get destinationPlace;
 
 }
 /// @nodoc
@@ -286,7 +322,7 @@ class __$JourneyModelCopyWithImpl<$Res>
 
 /// Create a copy of JourneyModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? origin = null,Object? destination = null,Object? status = null,Object? departsAt = null,Object? createdAt = null,Object? updatedAt = null,Object? startedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? origin = null,Object? destination = null,Object? status = null,Object? departsAt = null,Object? createdAt = null,Object? updatedAt = null,Object? startedAt = freezed,Object? originPlace = freezed,Object? destinationPlace = freezed,Object? plannedDistanceMeters = freezed,Object? plannedDurationSeconds = freezed,}) {
   return _then(_JourneyModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,origin: null == origin ? _self.origin : origin // ignore: cast_nullable_to_non_nullable
@@ -296,11 +332,39 @@ as JourneyStatus,departsAt: null == departsAt ? _self.departsAt : departsAt // i
 as DateTime,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,startedAt: freezed == startedAt ? _self.startedAt : startedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,originPlace: freezed == originPlace ? _self.originPlace : originPlace // ignore: cast_nullable_to_non_nullable
+as JourneyPlace?,destinationPlace: freezed == destinationPlace ? _self.destinationPlace : destinationPlace // ignore: cast_nullable_to_non_nullable
+as JourneyPlace?,plannedDistanceMeters: freezed == plannedDistanceMeters ? _self.plannedDistanceMeters : plannedDistanceMeters // ignore: cast_nullable_to_non_nullable
+as double?,plannedDurationSeconds: freezed == plannedDurationSeconds ? _self.plannedDurationSeconds : plannedDurationSeconds // ignore: cast_nullable_to_non_nullable
+as double?,
   ));
 }
 
+/// Create a copy of JourneyModel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$JourneyPlaceCopyWith<$Res>? get originPlace {
+    if (_self.originPlace == null) {
+    return null;
+  }
 
+  return $JourneyPlaceCopyWith<$Res>(_self.originPlace!, (value) {
+    return _then(_self.copyWith(originPlace: value));
+  });
+}/// Create a copy of JourneyModel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$JourneyPlaceCopyWith<$Res>? get destinationPlace {
+    if (_self.destinationPlace == null) {
+    return null;
+  }
+
+  return $JourneyPlaceCopyWith<$Res>(_self.destinationPlace!, (value) {
+    return _then(_self.copyWith(destinationPlace: value));
+  });
+}
 }
 
 // dart format on

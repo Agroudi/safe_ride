@@ -8,7 +8,7 @@ import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/journeys/data/models/location_fix.dart';
 import 'package:safe_ride/features/journeys/data/models/tracking_snapshot.dart';
 import 'package:safe_ride/features/journeys/logic/states/tracking_state.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/journey_status_chip.dart';
+import 'package:safe_ride/core/shared_widgets/status_chip.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/tracking_access.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/tracking_labels.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/tracking_in_progress.dart';
@@ -67,12 +67,12 @@ class TrackingCard extends StatelessWidget {
                 ),
               ),
               if (s case TrackingLive(:final snapshot))
-                JourneyStatusChip(
+                StatusChip(
                   label: TrackingLabels.status(context, snapshot.status),
                   color: TrackingLabels.tone(colors, snapshot.status),
                 )
               else if (s is TrackingRecorded)
-                JourneyStatusChip(
+                StatusChip(
                   label: context.tr('journeys.tracking.status.stopped'),
                   color: colors.textMuted,
                 ),

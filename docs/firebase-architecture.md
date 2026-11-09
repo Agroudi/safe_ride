@@ -67,7 +67,12 @@ document proposes changing one of them, it says so, and the change lands in
 > that move is not planned. The flow, setup and limits are in
 > [`escalation.md`](escalation.md), which replaces §7.3 here; the state of the
 > project is in [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). Account
-> deletion runs from the phone (`FirestoreAccountData`), not a function. §5.7's top-level `incidents` was not used: an incident lives at
+> deletion runs from the phone (`FirestoreAccountData`), not a function.
+> Batch 15 adds optional place fields to journeys: see [`maps.md`](maps.md).
+> Batch 16 adds the first data outside `users/{uid}`: `shares/{token}` is readable
+> by whoever holds the token, with no owner in it, and Firebase Hosting serves its
+> web viewer. Both stay within Spark, and both were deployed on 2026-11-05: see
+> [`location-sharing.md`](location-sharing.md). §5.7's top-level `incidents` was not used: an incident lives at
 > `users/{uid}/incidents`.
 
 ## 1. Summary — the recommended architecture
@@ -240,6 +245,11 @@ it), the onboarding flag. Nothing in the app may claim the account keeps
 them (existing honest-copy rule).
 
 ---
+
+> **Batch 17 changed one assumption here.** Linking two accounts does not need a
+> Cloud Function after all: `connectionInvites` and `users/{uid}/connections` do it
+> under Security Rules alone, on Spark (`docs/connections.md`). What still needs a
+> backend is everything that acts on a link: alerts, and hiding the inviter's id.
 
 ## 5. Phase 3 — Firestore database design
 

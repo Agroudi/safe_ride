@@ -98,6 +98,10 @@ abstract final class AppDurations {
   /// only completes when the server confirms it — waiting for that would
   /// leave the button spinning (docs/firebase-architecture.md §6.2).
   static const Duration syncWait = Duration(seconds: 4);
+
+  /// After the phone app opened with a number, a second Call within this
+  /// long is taken for the same tap landing twice and ignored.
+  static const Duration dialCooldown = Duration(seconds: 2);
 }
 
 /// What this build can do, set at build time.

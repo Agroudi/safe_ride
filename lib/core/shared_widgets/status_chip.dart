@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 
-/// A small rounded label: the status word on a wash of its colour. Also the
-/// "Planned" badge on a safety feature that is not built yet.
-class JourneyStatusChip extends StatelessWidget {
-  const JourneyStatusChip({
-    required this.label,
-    required this.color,
-    super.key,
-  });
+/// A small rounded label: the status word on a wash of its colour.
+class StatusChip extends StatelessWidget {
+  const StatusChip({required this.label, required this.color, super.key});
 
   final String label;
   final Color color;

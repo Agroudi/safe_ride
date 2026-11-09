@@ -7,6 +7,7 @@ import 'package:safe_ride/core/firebase/firestore_write.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 import 'package:safe_ride/features/journeys/data/models/location_fix.dart';
 import 'package:safe_ride/features/journeys/data/models/potential_incident.dart';
 import 'package:safe_ride/features/journeys/data/models/route_math.dart';
@@ -54,6 +55,9 @@ enum TrackStart {
 /// - **One observer** (the potential-incident monitor) is handed every fix,
 ///   tick and interruption of the recording — the location is subscribed
 ///   to once, here.
+/// - **Sharing reads, and does not record.** [trustedFixes] gives whoever
+///   shows the position the same fixes, and [watch] keeps this one
+///   subscription open with no journey: nothing is stored or judged for it.
 class JourneyTracker {
   JourneyTracker({
     required LocationSource location,
@@ -87,6 +91,12 @@ class JourneyTracker {
   /// No fix for this long starts a new segment.
   static const Duration segmentGap = Duration(minutes: 2);
 
+  /// After the location provider fails (not a refusal), the subscription is
+  /// tried again on the first tick after [firstRetry], then twice as long
+  /// each time, up to [maxRetryDelay].
+  static const Duration firstRetry = Duration(seconds: 5);
+  static const Duration maxRetryDelay = Duration(minutes: 1);
+
   /// A fix that adds no point (standing still) saves the session at most
   /// this often: it only moves `lastFixAt`, and fixes come every 2 s.
   static const Duration idleSave = Duration(seconds: 30);
@@ -104,11 +114,14 @@ class JourneyTracker {
 
   final StreamController<TrackingSnapshot?> _snapshots =
       StreamController<TrackingSnapshot?>.broadcast();
+  final StreamController<LocationFix> _trusted =
+      StreamController<LocationFix>.broadcast();
   final SpeedSmoother _smoother = SpeedSmoother();
   late final StreamSubscription<void> _journeyChanges;
   late final StreamSubscription<void> _accountChanges;
 
   TrackSession? _session;
+  bool _watching = false;
   StreamSubscription<LocationFix>? _fixes;
   StreamSubscription<bool>? _services;
   Timer? _ticker;
@@ -120,6 +133,16 @@ class JourneyTracker {
   Future<void> _queue = Future<void>.value();
   TrackingSnapshot? _current;
   LocationFix? _lastFix;
+
+  /// When a fix last agreed with the route's last point (`RouteFilter.judge`),
+  /// and the jumps in a row since (`_relocated`).
+  DateTime? _agreedAt;
+  final List<LocationFix> _outliers = <LocationFix>[];
+
+  /// When to subscribe again after the provider failed, and how long the
+  /// next wait is.
+  DateTime? _retryAt;
+  Duration? _retryDelay;
   DateTime? _subscribedAt;
   double? _speed;
   DateTime? _speedAt;
@@ -140,7 +163,34 @@ class JourneyTracker {
   /// The recording now; null when nothing is recorded.
   TrackingSnapshot? get current => _current;
 
+  /// The newest fix of the recording, whatever its accuracy; null when
+  /// nothing is recorded. For showing where the phone was, never for the
+  /// route.
+  LocationFix? get lastFix => _lastFix;
+
   Stream<TrackingSnapshot?> get snapshots => _snapshots.stream;
+
+  /// Every fix accurate, fresh and valid enough to trust, recording or not.
+  Stream<LocationFix> get trustedFixes => _trusted.stream;
+
+  /// Keeps the location subscription open with no journey being recorded, for
+  /// a share of the current location. Never asks: false without permission.
+  Future<bool> watch() async {
+    if (await _location.access() != LocationAccess.granted) return false;
+    _watching = true;
+    _subscribe();
+    return true;
+  }
+
+  /// Ends [watch]. A recording carries on with its subscription.
+  void unwatch() {
+    _watching = false;
+    if (_session != null) return;
+    unawaited(_fixes?.cancel());
+    _fixes = null;
+    unawaited(_services?.cancel());
+    _services = null;
+  }
 
   Future<LocationAccess> access() => _location.access();
 
@@ -201,6 +251,9 @@ class JourneyTracker {
     _resumed = now == null && session.last != null;
     _blocked = null;
     _lastFix = null;
+    _agreedAt = null;
+    _outliers.clear();
+    _retryAt = null;
     _smoother.clear();
     _syncedAt ??= _clock();
     _sync = session.pointCount == 0
@@ -208,6 +261,7 @@ class JourneyTracker {
         : session.settled
         ? RouteSync.synced
         : RouteSync.queued;
+    final IncidentPlace? destination = await _destinationOf(journeyId);
     _subscribe();
     _ticker ??= Timer.periodic(tickEvery, (_) => tick());
     _observer?.started(
@@ -216,6 +270,7 @@ class JourneyTracker {
       _clock().toUtc(),
       // Resumed after the app was closed: when tracking last saw a fix.
       lastFixBefore: now == null ? session.lastFixAt : null,
+      destination: destination,
     );
     _emit();
     if (!session.settled) unawaited(sync());
@@ -265,11 +320,16 @@ class JourneyTracker {
 
   void _clear() {
     _session = null;
+    _lastFix = null;
+    _agreedAt = null;
+    _outliers.clear();
+    _retryAt = null;
     _resumed = false;
     _speed = null;
     _speedAt = null;
     _current = null;
     _snapshots.add(null);
+    if (_watching) _subscribe();
   }
 
   /// Resumes the signed-in account's interrupted recording, if its journey
@@ -312,11 +372,45 @@ class JourneyTracker {
     }
   }
 
+  /// The trusted points recorded for [journeyId]: the phone's copy when it
+  /// has one, else the account's. For showing, never for changing.
+  Future<List<TrackPoint>> points(String journeyId) async {
+    final String? uid = await _uid();
+    if (uid == null) return const <TrackPoint>[];
+    final List<TrackPoint> local = await _store.points(uid, journeyId);
+    if (local.isNotEmpty) return local;
+    try {
+      return await _route.points(journeyId);
+    } on Object {
+      return const <TrackPoint>[];
+    }
+  }
+
+  /// Where the phone is now, for choosing a place: the recording's last fix
+  /// while it is running and fresh, else one reading. An older fix is where
+  /// the phone was, and a pin must never land there by mistake.
+  Future<LocationFix?> locate() async {
+    final LocationFix? fix = _lastFix;
+    final bool fresh =
+        fix != null &&
+        _fixes != null &&
+        _clock().difference(fix.at) <= signalLost;
+    return fresh ? fix : _location.current();
+  }
+
   /// Refreshes the status (signal lost?) and sends a chunk when it is time.
   /// Runs every [tickEvery] while recording.
   void tick() {
     final TrackSession? s = _session;
     if (s == null) return;
+    final DateTime? retry = _retryAt;
+    if (retry != null &&
+        _fixes == null &&
+        _blocked == null &&
+        !_clock().isBefore(retry)) {
+      _retryAt = null;
+      _subscribe();
+    }
     _observer?.ticked(s.journeyId, _clock().toUtc());
     _emit();
     final DateTime? last = _syncedAt;
@@ -485,17 +579,26 @@ class JourneyTracker {
 
   void _subscribe() {
     _subscribedAt = _clock();
+    // One subscription, whoever asks: a recording joins a share's, and the
+    // other way round.
+    if (_fixes != null) return;
+    final String notice = _session == null
+        ? 'sharing.notice'
+        : 'journeys.tracking.notice';
     _fixes = _location
         .fixes(
-          title: _translate('journeys.tracking.notice.title'),
-          text: _translate('journeys.tracking.notice.text'),
+          title: _translate('$notice.title'),
+          text: _translate('$notice.text'),
         )
         .listen(
           (LocationFix fix) => _serial(() => _record(fix)),
           onError: _lost,
         );
     _services ??= _location.serviceChanges.listen((bool on) {
-      if (_session == null) return;
+      if (_session == null) {
+        if (on && _watching) _subscribe();
+        return;
+      }
       if (!on) {
         _blocked = TrackingStatus.locationOff;
         _observer?.interrupted(
@@ -514,9 +617,30 @@ class JourneyTracker {
   void _lost(Object error) {
     unawaited(_fixes?.cancel());
     _fixes = null;
-    final bool off =
-        error is LocationSourceError &&
-        error.access == LocationAccess.serviceOff;
+    if (error is LocationSourceError) return _blockedBy(error.access);
+    unawaited(_afterFailure());
+  }
+
+  /// Not a refusal: the location provider itself failed. Reported as a
+  /// refusal, a hiccup used to end the recording until the app was opened
+  /// again. While access is still granted it is tried again on a later tick,
+  /// and the detection reports a lost signal on its own if no fix comes.
+  Future<void> _afterFailure() async {
+    LocationAccess access;
+    try {
+      access = await _location.access();
+    } on Object {
+      access = LocationAccess.denied;
+    }
+    if (access != LocationAccess.granted) return _blockedBy(access);
+    final Duration wait = _retryDelay ?? firstRetry;
+    _retryAt = _clock().add(wait);
+    _retryDelay = wait * 2 > maxRetryDelay ? maxRetryDelay : wait * 2;
+    _emit();
+  }
+
+  void _blockedBy(LocationAccess access) {
+    final bool off = access == LocationAccess.serviceOff;
     _blocked = off
         ? TrackingStatus.locationOff
         : TrackingStatus.permissionRequired;
@@ -534,12 +658,19 @@ class JourneyTracker {
   }
 
   Future<void> _record(LocationFix fix) async {
+    if (RouteFilter.judge(fix, null, _clock().toUtc()) == FixVerdict.accepted) {
+      _trusted.add(fix);
+    }
     final TrackSession? s = _session;
     if (s == null) return;
-    _observer?.fixed(s.journeyId, fix, _clock().toUtc());
-    _lastFix = fix;
+    final DateTime at = _clock().toUtc();
+    _observer?.fixed(s.journeyId, fix, at);
+    final LocationFix? latest = _lastFix;
+    // A late or repeated fix never moves "where the phone is" back in time.
+    if (latest == null || fix.at.isAfter(latest.at)) _lastFix = fix;
     _blocked = null;
-    final double? speed = _smoother.add(fix);
+    _retryDelay = null;
+    final double? speed = _smoother.add(fix, now: at);
     if (speed != null) {
       _speed = speed;
       _speedAt = fix.at;
@@ -550,9 +681,20 @@ class JourneyTracker {
         (_resumed ||
             previousFix == null ||
             fix.at.difference(previousFix) > segmentGap);
-    FixVerdict verdict = RouteFilter.judge(fix, s.last, _clock().toUtc());
+    FixVerdict verdict = RouteFilter.judge(
+      fix,
+      s.last,
+      at,
+      agreedAt: _agreedAt,
+    );
     // Across a gap the phone may have travelled far: not a GPS jump.
     if (newSegment && verdict == FixVerdict.jump) verdict = FixVerdict.accepted;
+    final bool relocated = verdict == FixVerdict.jump && _relocated(fix);
+    if (relocated) verdict = FixVerdict.accepted;
+    if (verdict == FixVerdict.accepted || verdict == FixVerdict.duplicate) {
+      _agreedAt = fix.at;
+      _outliers.clear();
+    }
     // A late-arriving old fix never moves this back.
     TrackSession next = s.copyWith(
       lastFixAt: previousFix != null && previousFix.isAfter(fix.at)
@@ -561,7 +703,8 @@ class JourneyTracker {
     );
     if (verdict == FixVerdict.accepted) {
       _resumed = false;
-      final int segment = newSegment ? s.segment + 1 : s.segment;
+      final bool breaks = newSegment || relocated;
+      final int segment = breaks ? s.segment + 1 : s.segment;
       final TrackPoint point = TrackPoint(
         lat: fix.latitude,
         lng: fix.longitude,
@@ -571,7 +714,8 @@ class JourneyTracker {
         segment: segment,
       );
       final TrackPoint? last = s.last;
-      final double added = last != null && !newSegment
+      // Nothing is counted across a break: the distance is a lower bound.
+      final double added = last != null && !breaks
           ? RouteMath.between(last, point)
           : 0;
       await _store.append(s.uid, s.journeyId, point);
@@ -597,6 +741,33 @@ class JourneyTracker {
     _emit();
     if (next.pointCount - next.syncedCount >= RouteRepository.chunkSize) {
       unawaited(sync());
+    }
+  }
+
+  /// The positions jumped away from the route and stayed:
+  /// [RouteFilter.relocateAfter] jumps in a row that agree with each other.
+  /// The route goes on from there in a new segment, with no distance across
+  /// — rather than refusing every true fix after one bad point forever.
+  bool _relocated(LocationFix fix) {
+    final LocationFix? previous = _outliers.isEmpty ? null : _outliers.last;
+    if (previous == null || !RouteFilter.agrees(previous, fix)) {
+      _outliers.clear();
+    }
+    _outliers.add(fix);
+    if (_outliers.length < RouteFilter.relocateAfter) return false;
+    _outliers.clear();
+    return true;
+  }
+
+  /// Where the journey is planned to end, when it was picked on the map.
+  Future<IncidentPlace?> _destinationOf(String journeyId) async {
+    try {
+      final JourneyPlace? place = (await _journeys.journey(
+        journeyId,
+      ))?.destinationPlace;
+      return place == null ? null : (latitude: place.lat, longitude: place.lng);
+    } on JourneyFailure {
+      return null;
     }
   }
 
@@ -727,5 +898,6 @@ class JourneyTracker {
     await _journeyChanges.cancel();
     await _accountChanges.cancel();
     await _snapshots.close();
+    await _trusted.close();
   }
 }

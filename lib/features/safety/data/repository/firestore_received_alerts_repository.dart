@@ -15,7 +15,7 @@ class FirestoreReceivedAlertsRepository implements ReceivedAlertsRepository {
       path: FirestorePaths.receivedAlerts,
       read: (String id, Map<String, dynamic> data) =>
           ReceivedAlert.fromJson(<String, dynamic>{...data, 'id': id}),
-      query: (Query<Map<String, dynamic>> q) =>
+      query: (Query<Map<String, dynamic>> q, String _) =>
           q.orderBy('createdAt', descending: true).limit(50),
     );
   }

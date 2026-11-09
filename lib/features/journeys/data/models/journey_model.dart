@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:safe_ride/core/firebase/timestamp_converter.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 
 part 'journey_model.freezed.dart';
 part 'journey_model.g.dart';
@@ -25,8 +26,9 @@ enum JourneyStatus {
 }
 
 /// One journey the user planned, stored in their account
-/// (`users/{uid}/journeys/{id}`, docs/firebase-architecture.md §5.3). Places
-/// are the user's own words — no geocoding, no coordinates.
+/// (`users/{uid}/journeys/{id}`, docs/firebase-architecture.md §5.3).
+/// [origin] and [destination] are always the user's own words; the map adds
+/// where they are when it knows. A journey from before maps simply has none.
 @freezed
 abstract class JourneyModel with _$JourneyModel {
   const factory JourneyModel({
@@ -46,6 +48,14 @@ abstract class JourneyModel with _$JourneyModel {
 
     /// UTC; when the user started it, set by the server. Null until then.
     @NullableTimestampConverter() DateTime? startedAt,
+
+    /// Where the journey starts and ends, when picked on the map.
+    @JourneyPlaceConverter() JourneyPlace? originPlace,
+    @JourneyPlaceConverter() JourneyPlace? destinationPlace,
+
+    /// The routing provider's estimate when it was planned, if it had one.
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   }) = _JourneyModel;
 
   factory JourneyModel.fromJson(Map<String, dynamic> json) =>

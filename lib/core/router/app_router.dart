@@ -15,20 +15,31 @@ import 'package:safe_ride/features/authentication/presentation/pages/settings_pa
 import 'package:safe_ride/features/authentication/presentation/pages/splash_page.dart';
 import 'package:safe_ride/features/authentication/presentation/pages/welcome_page.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
+import 'package:safe_ride/features/journeys/data/models/location_share.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/edit_journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/home_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/journey_checklist_page.dart';
+import 'package:safe_ride/features/journeys/presentation/pages/journey_map_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/my_journeys_page.dart';
+import 'package:safe_ride/features/journeys/presentation/pages/place_picker_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/plan_journey_page.dart';
 import 'package:safe_ride/features/journeys/presentation/pages/review_journey_page.dart';
+import 'package:safe_ride/features/journeys/presentation/pages/shared_view_page.dart';
+import 'package:safe_ride/features/journeys/presentation/pages/sharing_page.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/map_markers.dart';
+import 'package:safe_ride/features/safety/data/models/connection_links.dart';
+import 'package:safe_ride/features/safety/presentation/pages/accept_connection_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/accept_invite_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/contact_form_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/emergency_info_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/journey_safety_page.dart';
+import 'package:safe_ride/features/safety/presentation/pages/manage_connection_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/received_alerts_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/safety_center_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/safety_guide_page.dart';
+import 'package:safe_ride/features/safety/presentation/pages/safety_help_page.dart';
 import 'package:safe_ride/features/safety/presentation/pages/trusted_contacts_page.dart';
 
 /// Central navigation.
@@ -129,6 +140,60 @@ abstract final class AppRouter {
       const PlanJourneyPage(),
     ),
     GoRoute(
+      path: AppRoutes.pickPlacePath,
+      name: AppRoutes.pickPlace,
+      pageBuilder: (BuildContext context, GoRouterState state) {
+        final Object? extra = state.extra;
+        final Map<Object?, Object?> asked = extra is Map
+            ? extra
+            : const <Object?, Object?>{};
+        return AppPages.task(
+          context,
+          state,
+          PlacePickerPage(
+            kind: asked['kind'] == MapPlaceKind.start.name
+                ? MapPlaceKind.start
+                : MapPlaceKind.destination,
+            initial: const JourneyPlaceConverter().fromJson(asked['place']),
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.shareLocationPath,
+      name: AppRoutes.shareLocation,
+      pageBuilder: (BuildContext context, GoRouterState state) =>
+          AppPages.task(context, state, const SharingPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.shareJourneyPath,
+      name: AppRoutes.shareJourney,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        SharingPage(journeyId: state.pathParameters['id']),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.sharedViewPath,
+      name: AppRoutes.sharedView,
+      pageBuilder: (BuildContext context, GoRouterState state) =>
+          AppPages.stage(
+            context,
+            state,
+            SharedViewPage(token: ShareLinks.tokenOf(state.uri)),
+          ),
+    ),
+    GoRoute(
+      path: AppRoutes.journeyMapPath,
+      name: AppRoutes.journeyMap,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        JourneyMapPage(id: state.pathParameters['id']!),
+      ),
+    ),
+    GoRoute(
       path: AppRoutes.reviewJourneyPath,
       name: AppRoutes.reviewJourney,
       // Reached only from the plan screen; a restored or hand-typed
@@ -188,6 +253,29 @@ abstract final class AppRouter {
         state,
         ContactFormPage(id: state.pathParameters['id']),
       ),
+    ),
+    GoRoute(
+      path: AppRoutes.manageConnectionPath,
+      name: AppRoutes.manageConnection,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        ManageConnectionPage(id: state.pathParameters['id']!),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.connectionInvitePath,
+      name: AppRoutes.connectionInvite,
+      pageBuilder: (BuildContext context, GoRouterState state) => AppPages.task(
+        context,
+        state,
+        AcceptConnectionPage(token: ConnectionLinks.tokenOf(state.uri)),
+      ),
+    ),
+    _task(
+      AppRoutes.safetyHelp,
+      AppRoutes.safetyHelpPath,
+      const SafetyHelpPage(),
     ),
     _task(
       AppRoutes.safetyGuide,

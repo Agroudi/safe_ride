@@ -11,14 +11,16 @@ import 'package:safe_ride/core/shared_widgets/form_scaffold.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/planned_route.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/states/journeys_state.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/departure_field.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/journey_form.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/journey_planner.dart';
 import 'package:safe_ride/core/shared_widgets/info_note.dart';
 
-/// Start a Journey: where from, where to and when (`JourneyForm`). Nothing
-/// is saved here; Review journey moves on to the review screen with them.
+/// Start a Journey: where from, where to and when, with the map above them
+/// (`JourneyPlanner`). Nothing is saved here; Review journey moves on to the
+/// review screen with them.
 class PlanJourneyPage extends StatelessWidget {
   const PlanJourneyPage({super.key});
 
@@ -44,6 +46,7 @@ class _PlanJourneyViewState extends State<_PlanJourneyView> {
 
   /// Local time; a plan starts at the next quarter-hour.
   DateTime _departsAt = nextQuarterHour(DateTime.now());
+  PlannedPlaces _places = (origin: null, destination: null, route: null);
 
   @override
   void dispose() {
@@ -64,6 +67,10 @@ class _PlanJourneyViewState extends State<_PlanJourneyView> {
         origin: _from.text,
         destination: _to.text,
         departsAt: _departsAt.toUtc(),
+        originPlace: _places.origin,
+        destinationPlace: _places.destination,
+        plannedDistanceMeters: _places.route?.distanceMeters,
+        plannedDurationSeconds: _places.route?.durationSeconds,
       ).toExtra(),
     );
   }
@@ -81,12 +88,13 @@ class _PlanJourneyViewState extends State<_PlanJourneyView> {
       children: <Widget>[
         TitleBar(title: context.tr('journeys.plan.title')),
         Gap(24.fx),
-        JourneyForm(
+        JourneyPlanner(
           from: _from,
           to: _to,
           departsAt: _departsAt,
           onDeparture: (DateTime d) => _departsAt = d,
           past: past,
+          onPlaces: (PlannedPlaces p) => _places = p,
         ),
         Gap(24.fx),
         InfoNote(text: context.tr('journeys.notTracked')),

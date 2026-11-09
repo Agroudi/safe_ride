@@ -55,6 +55,30 @@ class FirestoreRouteRepository implements RouteRepository {
   }
 
   @override
+  Future<List<TrackPoint>> points(String journeyId) async {
+    final SessionUser? user = await _session.signedInUser();
+    if (user == null) return const <TrackPoint>[];
+    final QuerySnapshot<Map<String, dynamic>> chunks = await _db
+        .collection(FirestorePaths.journeyRoute(user.id, journeyId))
+        .orderBy('chunk')
+        .get();
+    return <TrackPoint>[
+      for (final QueryDocumentSnapshot<Map<String, dynamic>> c in chunks.docs)
+        for (final Object? p in (c.data()['points'] as List<Object?>?) ?? [])
+          if (p is Map<String, dynamic>) _read(p),
+    ];
+  }
+
+  static TrackPoint _read(Map<String, dynamic> p) => TrackPoint(
+    lat: (p['lat'] as num).toDouble(),
+    lng: (p['lng'] as num).toDouble(),
+    at: (p['at'] as Timestamp).toDate().toUtc(),
+    accuracy: (p['acc'] as num).toDouble(),
+    speed: (p['spd'] as num?)?.toDouble(),
+    segment: (p['seg'] as num?)?.toInt() ?? 0,
+  );
+
+  @override
   Future<RouteSummary?> summary(String journeyId) async {
     final SessionUser? user = await _session.signedInUser();
     if (user == null) return null;

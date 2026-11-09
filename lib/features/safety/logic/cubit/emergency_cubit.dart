@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safe_ride/core/country/country.dart';
 import 'package:safe_ride/core/country/country_repository.dart';
 import 'package:safe_ride/features/safety/data/models/emergency_services.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
 import 'package:safe_ride/features/safety/data/repository/emergency_repository.dart';
 import 'package:safe_ride/features/safety/data/repository/phone_dialer.dart';
 import 'package:safe_ride/features/safety/logic/states/emergency_state.dart';
@@ -12,14 +13,14 @@ import 'package:safe_ride/features/safety/logic/states/emergency_state.dart';
 /// only this phone (the chosen country, the bundled numbers), so it works
 /// offline; follows a change of country from anywhere. One per screen.
 class EmergencyCubit extends Cubit<EmergencyState> {
-  EmergencyCubit(this._countries, this._numbers, this._dialer)
+  EmergencyCubit(this._countries, this._numbers, this._calls)
     : super(const EmergencyLoading()) {
     _changes = _countries.changes.listen((_) => load());
   }
 
   final CountryRepository _countries;
   final EmergencyRepository _numbers;
-  final PhoneDialer _dialer;
+  final CallLauncher _calls;
   late final StreamSubscription<void> _changes;
 
   Future<void> load() async {
@@ -41,8 +42,9 @@ class EmergencyCubit extends Cubit<EmergencyState> {
 
   Future<void> choose(String code) => _countries.choose(code);
 
-  /// Opens the phone app with [number]; the outcome says only that.
-  Future<DialOutcome> dial(String number) => _dialer.open(number);
+  /// Opens the phone app with [number]; the outcome says only that. Null:
+  /// the tap was a duplicate and nothing happened.
+  Future<DialOutcome?> dial(String number) => _calls.open(number);
 
   @override
   Future<void> close() async {

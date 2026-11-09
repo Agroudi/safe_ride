@@ -5,6 +5,7 @@ import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_draft.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_repository.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_start_cubit.dart';
@@ -83,6 +84,10 @@ class _Repository extends Fake implements JourneyRepository {
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   }) async {
     plans++;
     await _maybe();

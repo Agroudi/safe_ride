@@ -53,7 +53,7 @@ void main() {
       db: db,
       path: (String uid) => 'users/$uid/things',
       read: (String id, Map<String, dynamic> data) => 0,
-      query: (_) => refused,
+      query: (_, _) => refused,
       clock: () => now,
     );
     // What every list cubit does on `changes`: read again.
@@ -87,7 +87,8 @@ void main() {
       db: db,
       path: (String uid) => 'users/$uid/things',
       read: (String id, Map<String, dynamic> data) => 0,
-      query: (Query<Map<String, dynamic>> q) => calls++ == 0 ? refused : q,
+      query: (Query<Map<String, dynamic>> q, String _) =>
+          calls++ == 0 ? refused : q,
       clock: () => now,
     );
     await expectLater(things.items('sara'), throwsA(isA<FirebaseException>()));

@@ -6,7 +6,6 @@ import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/core/extensions/locale_numbers.dart';
-import 'package:safe_ride/core/notifications/app_notifier.dart';
 import 'package:safe_ride/core/shared_widgets/app_empty_state.dart';
 import 'package:safe_ride/core/shared_widgets/title_bar.dart';
 import 'package:safe_ride/features/safety/data/models/received_alert.dart';
@@ -33,10 +32,8 @@ class _ReceivedAlertsView extends StatelessWidget {
 
   Future<void> _call(BuildContext context, String number) async {
     final ReceivedAlertsCubit cubit = context.read<ReceivedAlertsCubit>();
-    final DialOutcome outcome = await cubit.dial(number);
-    if (context.mounted) {
-      sl<AppNotifier>().show(SafetyNotices.dial(context, outcome, number));
-    }
+    final DialOutcome? outcome = await cubit.dial(number);
+    if (context.mounted) SafetyNotices.showDial(context, outcome, number);
   }
 
   @override

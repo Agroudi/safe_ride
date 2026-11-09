@@ -1,4 +1,5 @@
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
+import 'package:safe_ride/features/journeys/data/models/journey_place.dart';
 
 /// The journeys seam: home, My Journeys and the planning screens ask this,
 /// never a storage client. `FirestoreJourneyRepository` keeps them in the
@@ -12,11 +13,16 @@ abstract interface class JourneyRepository {
   /// One journey, or null when the account has none with [id].
   Future<JourneyModel?> journey(String id);
 
-  /// Saves a confirmed plan as [JourneyStatus.planned].
+  /// Saves a confirmed plan as [JourneyStatus.planned]. The places and the
+  /// estimate are optional: a journey needs only the user's words.
   Future<JourneyModel> plan({
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   });
 
   /// Changes a planned journey's places and departure. Throws
@@ -26,6 +32,10 @@ abstract interface class JourneyRepository {
     required String origin,
     required String destination,
     required DateTime departsAt,
+    JourneyPlace? originPlace,
+    JourneyPlace? destinationPlace,
+    double? plannedDistanceMeters,
+    double? plannedDurationSeconds,
   });
 
   /// planned → active, only with the pre-journey checklist for

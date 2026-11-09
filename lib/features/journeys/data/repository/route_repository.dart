@@ -21,6 +21,10 @@ abstract interface class RouteRepository {
     required RouteSummary summary,
   });
 
+  /// The route the account holds for the signed-in user's journey, in the
+  /// order it was recorded.
+  Future<List<TrackPoint>> points(String journeyId);
+
   /// What the account has for the signed-in user's journey, if anything.
   Future<RouteSummary?> summary(String journeyId);
 }

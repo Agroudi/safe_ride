@@ -224,16 +224,18 @@ void main() {
         expect(c.escalationReadyAt, isNotNull);
         expect(
           checks.writes - before,
-          2,
-          reason: 'timed out, then handed over',
+          3,
+          reason: 'timed out, handed over, and the follow-up shown',
         );
+        expect(c.stage, SafetyStage.awaitingUserAction);
+        expect(c.presentedAt, isNotNull);
         expect(stored('e1').status, IncidentStatus.escalationReady);
         expect(stored('e1').reason, 'test', reason: 'details kept');
         expect(s.current?.status, SafetyCheckStatus.escalationReady);
 
         // Nothing more happens, however long it waits.
         await advance(s, const Duration(minutes: 5));
-        expect(checks.writes - before, 2);
+        expect(checks.writes - before, 3);
         s.acknowledge();
         expect(s.current, isNull);
       },

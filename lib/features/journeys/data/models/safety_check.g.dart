@@ -14,6 +14,17 @@ _SafetyCheck _$SafetyCheckFromJson(Map<String, dynamic> json) => _SafetyCheck(
   status: $enumDecode(_$SafetyCheckStatusEnumMap, json['status']),
   startedAt: DateTime.parse(json['startedAt'] as String),
   deadline: DateTime.parse(json['deadline'] as String),
+  incidentType: $enumDecodeNullable(
+    _$IncidentTypeEnumMap,
+    json['incidentType'],
+  ),
+  incidentConfidence: $enumDecodeNullable(
+    _$IncidentConfidenceEnumMap,
+    json['incidentConfidence'],
+  ),
+  incidentDetectedAt: json['incidentDetectedAt'] == null
+      ? null
+      : DateTime.parse(json['incidentDetectedAt'] as String),
   confirmedAt: json['confirmedAt'] == null
       ? null
       : DateTime.parse(json['confirmedAt'] as String),
@@ -26,6 +37,16 @@ _SafetyCheck _$SafetyCheckFromJson(Map<String, dynamic> json) => _SafetyCheck(
   escalationReadyAt: json['escalationReadyAt'] == null
       ? null
       : DateTime.parse(json['escalationReadyAt'] as String),
+  presentedAt: json['presentedAt'] == null
+      ? null
+      : DateTime.parse(json['presentedAt'] as String),
+  resolvedAt: json['resolvedAt'] == null
+      ? null
+      : DateTime.parse(json['resolvedAt'] as String),
+  resolution: $enumDecodeNullable(
+    _$EscalationResolutionEnumMap,
+    json['resolution'],
+  ),
   cancelledAt: json['cancelledAt'] == null
       ? null
       : DateTime.parse(json['cancelledAt'] as String),
@@ -50,10 +71,17 @@ Map<String, dynamic> _$SafetyCheckToJson(_SafetyCheck instance) =>
       'status': _$SafetyCheckStatusEnumMap[instance.status]!,
       'startedAt': instance.startedAt.toIso8601String(),
       'deadline': instance.deadline.toIso8601String(),
+      'incidentType': _$IncidentTypeEnumMap[instance.incidentType],
+      'incidentConfidence':
+          _$IncidentConfidenceEnumMap[instance.incidentConfidence],
+      'incidentDetectedAt': instance.incidentDetectedAt?.toIso8601String(),
       'confirmedAt': instance.confirmedAt?.toIso8601String(),
       'timedOutAt': instance.timedOutAt?.toIso8601String(),
       'timeoutProcessedAt': instance.timeoutProcessedAt?.toIso8601String(),
       'escalationReadyAt': instance.escalationReadyAt?.toIso8601String(),
+      'presentedAt': instance.presentedAt?.toIso8601String(),
+      'resolvedAt': instance.resolvedAt?.toIso8601String(),
+      'resolution': _$EscalationResolutionEnumMap[instance.resolution],
       'cancelledAt': instance.cancelledAt?.toIso8601String(),
       'cancelReason': _$SafetyCheckCancelReasonEnumMap[instance.cancelReason],
       'escalationQueuedAt': instance.escalationQueuedAt?.toIso8601String(),
@@ -66,6 +94,23 @@ const _$SafetyCheckStatusEnumMap = {
   SafetyCheckStatus.timedOut: 'timedOut',
   SafetyCheckStatus.escalationReady: 'escalationReady',
   SafetyCheckStatus.cancelled: 'cancelled',
+};
+
+const _$IncidentTypeEnumMap = {
+  IncidentType.suddenDeceleration: 'suddenDeceleration',
+  IncidentType.prolongedStop: 'prolongedStop',
+  IncidentType.trackingInterrupted: 'trackingInterrupted',
+};
+
+const _$IncidentConfidenceEnumMap = {
+  IncidentConfidence.low: 'low',
+  IncidentConfidence.medium: 'medium',
+  IncidentConfidence.high: 'high',
+};
+
+const _$EscalationResolutionEnumMap = {
+  EscalationResolution.userSafe: 'userSafe',
+  EscalationResolution.journeyEnded: 'journeyEnded',
 };
 
 const _$SafetyCheckCancelReasonEnumMap = {

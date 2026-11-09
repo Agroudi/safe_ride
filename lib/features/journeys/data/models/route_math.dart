@@ -62,6 +62,10 @@ abstract final class RouteFilter {
   /// Faster than this (m/s, 252 km/h) between two points is a GPS jump.
   static const double maxSpeed = 70;
 
+  /// Jumps in a row that agree with each other: the vehicle really is there
+  /// (out of a tunnel, a car park). Fewer can be one stuck reflection.
+  static const int relocateAfter = 3;
+
   /// A fix older than this when it arrives is a cached one.
   static const Duration maxAge = Duration(seconds: 30);
 
@@ -70,7 +74,16 @@ abstract final class RouteFilter {
   /// a phone's clock can be a little wrong.
   static const Duration maxAhead = Duration(minutes: 5);
 
-  static FixVerdict judge(LocationFix fix, TrackPoint? last, DateTime now) {
+  /// [agreedAt] is the latest time a fix agreed with [last] (it was added, or
+  /// was within [minMove] of it). The time a jump is measured over starts
+  /// there, not at [last]: after a long wait, a glitch would otherwise have
+  /// all that time to have "driven" its distance.
+  static FixVerdict judge(
+    LocationFix fix,
+    TrackPoint? last,
+    DateTime now, {
+    DateTime? agreedAt,
+  }) {
     if (!_valid(fix.latitude, fix.longitude)) return FixVerdict.invalid;
     if (fix.accuracy <= 0 || fix.accuracy.isNaN || fix.accuracy > maxAccuracy) {
       return FixVerdict.inaccurate;
@@ -86,9 +99,29 @@ abstract final class RouteFilter {
       fix.longitude,
     );
     if (moved < minMove) return FixVerdict.duplicate;
-    final double seconds = fix.at.difference(last.at).inMilliseconds / 1000;
+    final DateTime from =
+        agreedAt != null &&
+            agreedAt.isAfter(last.at) &&
+            agreedAt.isBefore(fix.at)
+        ? agreedAt
+        : last.at;
+    final double seconds = fix.at.difference(from).inMilliseconds / 1000;
     if (moved / seconds > maxSpeed) return FixVerdict.jump;
     return FixVerdict.accepted;
+  }
+
+  /// Whether [b] could follow [a]: later, and no faster than [maxSpeed].
+  static bool agrees(LocationFix a, LocationFix b) {
+    if (!b.at.isAfter(a.at)) return false;
+    final double seconds = b.at.difference(a.at).inMilliseconds / 1000;
+    return RouteMath.distance(
+              a.latitude,
+              a.longitude,
+              b.latitude,
+              b.longitude,
+            ) /
+            seconds <=
+        maxSpeed;
   }
 
   static bool _valid(double lat, double lng) =>
@@ -120,8 +153,9 @@ final class SpeedSmoother {
   DateTime? _at;
 
   /// The smoothed speed (m/s) after [fix], or null when [fix] carries no
-  /// trustworthy speed.
-  double? add(LocationFix fix) {
+  /// trustworthy speed — including a repeat, one that arrived after a newer
+  /// one, and one older than [RouteFilter.maxAge] at [now].
+  double? add(LocationFix fix, {DateTime? now}) {
     final double? speed = fix.speed;
     final double? error = fix.speedAccuracy;
     if (speed == null ||
@@ -133,6 +167,10 @@ final class SpeedSmoother {
       return null;
     }
     final DateTime? previous = _at;
+    if ((previous != null && !fix.at.isAfter(previous)) ||
+        (now != null && now.difference(fix.at) > RouteFilter.maxAge)) {
+      return null;
+    }
     final double? average = _average;
     _average =
         average == null ||

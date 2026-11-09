@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/country/country_cubit.dart';
@@ -209,6 +210,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: BlocProvider<PreferencesCubit>.value(
           value: prefs,
           child: ScreenUtilInit(
@@ -532,7 +534,7 @@ void main() {
         200,
       );
       expect(find.text('about.notYet.title'.tr()), findsOneWidget);
-      expect(find.text('about.notYet.sharing'.tr()), findsOneWidget);
+      expect(find.text('about.notYet.alerts'.tr()), findsOneWidget);
     });
 
     // The only place the app asks for the permission, and only on a tap.

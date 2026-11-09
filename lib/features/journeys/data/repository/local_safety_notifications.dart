@@ -32,8 +32,16 @@ Future<void> safetyNotificationAction(NotificationResponse response) async {
 
 /// [SafetyNotifications] as local notifications.
 ///
-/// - **One id**, so a safety check is never shown twice: a new notification
-///   replaces the last one.
+/// - **One id** (7001) for every safety notification, so a safety check is
+///   never shown twice and only one check exists at a time: the "no answer"
+///   notice replaces the question, and a new question replaces both.
+/// - **Shown only when allowed:** [asking] and [noAnswer] say false when the
+///   phone would not show them. The system can still hide one (Do Not
+///   Disturb, a focus mode, an OEM's battery rules); nothing assumes it was
+///   seen.
+/// - **An old notice cannot reopen anything:** its "I'm safe" is weighed by
+///   the moment of the tap against the deadline, and only on a pending
+///   check; a plain tap only opens the app.
 /// - **Android:** the highest importance a channel can ask for, category
 ///   `alarm`, public on the lock screen (the text says nothing private) —
 ///   whether it actually shows there is the phone's setting. The countdown
@@ -151,10 +159,12 @@ class LocalSafetyNotifications implements SafetyNotifications {
   );
 
   @override
-  Future<void> asking(SafetyCheck check) async {
+  Future<bool> asking(SafetyCheck check) async {
     await prepare();
     final Duration left = check.deadline.difference(DateTime.now().toUtc());
-    if (left.isNegative) return;
+    if (left.isNegative || await access() != SafetyNoticeAccess.allowed) {
+      return false;
+    }
     await _plugin.show(
       id: _id,
       title: 'journeys.safetyCheck.title'.tr(),
@@ -177,20 +187,26 @@ class LocalSafetyNotifications implements SafetyNotifications {
         ),
       ),
     );
+    return true;
   }
 
+  /// Replaces the question on the same id, with no action: a tap only opens
+  /// the app, where the follow-up is shown.
   @override
-  Future<void> noAnswer() async {
+  Future<bool> noAnswer(SafetyCheck check) async {
     await prepare();
+    if (await access() != SafetyNoticeAccess.allowed) return false;
     await _plugin.show(
       id: _id,
       title: 'journeys.safetyCheck.noAnswer.title'.tr(),
       body: 'journeys.safetyCheck.notice.noAnswer'.tr(),
+      payload: check.id,
       notificationDetails: NotificationDetails(
         android: _androidDetails(left: Duration.zero, deadline: null),
         iOS: const DarwinNotificationDetails(),
       ),
     );
+    return true;
   }
 
   @override

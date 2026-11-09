@@ -9,7 +9,8 @@ import 'package:safe_ride/features/safety/data/models/emergency_services.dart';
 ///
 /// **Every entry is checked before it is used** (a two-letter code; digits
 /// only; known service types, each once; an official or secondary source
-/// that the country lists; a check date). A country whose entry fails any
+/// that the country lists; a check date; a regional number names its
+/// regions in a note). A country whose entry fails any
 /// check is left out whole — never shown half-right — and the screen says
 /// its numbers are unavailable. `emergency_data_source_test` fails the
 /// build on any invalid entry, so a bad edit cannot ship.
@@ -69,6 +70,7 @@ class EmergencyDataSource {
             (EmergencyService s) =>
                 _digits.hasMatch(s.number) &&
                 s.types.isNotEmpty &&
+                (!s.regional || s.note != null) &&
                 s.sourceIds.isNotEmpty &&
                 s.sourceIds.every(sourceIds.contains),
           );
@@ -98,7 +100,12 @@ class EmergencyDataSource {
 
   static EmergencyService _service(Object? json) {
     final Map<String, Object?> m = (json! as Map).cast<String, Object?>();
+    final Object scope = m['scope'] ?? 'national';
+    if (scope != 'national' && scope != 'regional') {
+      throw const FormatException('scope');
+    }
     return EmergencyService(
+      regional: scope == 'regional',
       types: <EmergencyServiceType>[
         for (final Object? t in m['types']! as List)
           EmergencyServiceType.values.byName(t! as String),

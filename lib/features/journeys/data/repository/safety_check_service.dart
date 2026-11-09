@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:safe_ride/core/safety/escalation_gate.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_failure.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
@@ -64,14 +65,21 @@ enum ConfirmOutcome {
 /// - **Exactly once:** every change runs in one queue and re-reads the
 ///   stored check; a move the state machine forbids is never written. "I'm
 ///   safe" at or after the deadline is too late; a second tap does nothing.
-/// - **Timed out** marks the incident `escalationReady` — no answer, not an
-///   accident — and `EscalationSync` takes it from there.
+/// - **Timed out** prepares the escalation: the check becomes its one
+///   record ([SafetyCheck.stage]), and the incident `escalationReady` — no
+///   answer, not an accident. Nobody is contacted by it: `EscalationSync`
+///   sends nothing on this plan.
+/// - **The follow-up** is shown once, in the foreground (presented); it
+///   stays open until the user says they are okay ([resolveSafe]) or the
+///   journey ends. Closing the note leaves it open, for the journey screen
+///   and the help screen.
 /// - **Cancelled** when the journey ends or the account signs out.
 /// - **Off screen** the question is a notification ([SafetyNotifications]):
 ///   shown only while the app is not in the foreground, so it never doubles
 ///   the prompt. An "I'm safe" tapped on it counts from the moment of the
-///   tap, even if the app reads it later.
-class SafetyCheckService {
+///   tap, even if the app reads it later; one tapped after the deadline, or
+///   on a check that is no longer pending, changes nothing.
+class SafetyCheckService implements EscalationGate {
   SafetyCheckService({
     required IncidentRepository incidents,
     required SafetyCheckRepository checks,
@@ -157,7 +165,22 @@ class SafetyCheckService {
         _show(c);
       }
     }
+    await _closeEnded(uid);
     await _evaluate();
+    // Timed out while the app was away: shown once, now that it is back —
+    // whether it is already the one on hand (from the notification) or not.
+    if (_inForeground()) {
+      final SafetyCheck? onHand = _current;
+      final SafetyCheck? unseen = onHand == null
+          ? _newest(
+              await _checks.forUser(uid),
+              (SafetyCheck c) => c.stage == SafetyStage.escalationPrepared,
+            )
+          : onHand.stage == SafetyStage.escalationPrepared
+          ? onHand
+          : null;
+      if (unseen != null) await _present(unseen);
+    }
     await _notice();
   }
 
@@ -233,10 +256,123 @@ class SafetyCheckService {
     _show(null);
   });
 
-  /// The user closed the "no answer" note. Changes nothing stored.
+  /// The user closed the "no answer" note. Changes nothing stored: the
+  /// escalation stays open.
   void acknowledge() {
     final SafetyCheck? c = _current;
     if (c != null && c.status != SafetyCheckStatus.pending) _show(null);
+  }
+
+  @override
+  Stream<void> get changed => _changes.stream;
+
+  @override
+  Future<OpenEscalation?> latestOpen() async {
+    final String? uid = await _uid();
+    if (uid == null) return null;
+    return _asOpen(
+      _newest(
+        await _checks.forUser(uid),
+        (SafetyCheck c) => c.isOpenEscalation,
+      ),
+    );
+  }
+
+  @override
+  Future<OpenEscalation?> openFor(String journeyId) async {
+    final String? uid = await _uid();
+    if (uid == null) return null;
+    return _asOpen(
+      _newest(
+        await _checks.forUser(uid),
+        (SafetyCheck c) => c.isOpenEscalation && c.journeyId == journeyId,
+      ),
+    );
+  }
+
+  static OpenEscalation? _asOpen(SafetyCheck? c) => c == null
+      ? null
+      : OpenEscalation(
+          checkId: c.id,
+          journeyId: c.journeyId,
+          timedOutAt: c.timedOutAt ?? c.deadline,
+          detectedAt: c.incidentDetectedAt,
+        );
+
+  @override
+  Future<ResolveOutcome> resolveSafe(String checkId) {
+    final Completer<ResolveOutcome> outcome = Completer<ResolveOutcome>();
+    unawaited(
+      _serial(() async {
+        try {
+          final SafetyCheck? c = await _find(checkId);
+          if (c == null || !c.isOpenEscalation) {
+            return outcome.complete(ResolveOutcome.notOpen);
+          }
+          final DateTime at = now();
+          await _resolve(c, EscalationResolution.userSafe, at);
+          // Their answer stands: detection raises nothing new here until
+          // the vehicle moves (`IncidentMonitor`).
+          await _setIncident(
+            c,
+            (PotentialIncident i) => i.copyWith(
+              status: IncidentStatus.dismissed,
+              resolution: IncidentResolution.confirmedSafe,
+              updatedAt: at,
+            ),
+          );
+          outcome.complete(ResolveOutcome.resolved);
+        } finally {
+          if (!outcome.isCompleted) outcome.complete(ResolveOutcome.notOpen);
+        }
+      }),
+    );
+    return outcome.future;
+  }
+
+  Future<void> _resolve(
+    SafetyCheck c,
+    EscalationResolution how,
+    DateTime at,
+  ) async {
+    final SafetyCheck closed = c.resolved(how, at);
+    if (identical(closed, c)) return;
+    await _checks.put(closed);
+    if (_current?.id == c.id) {
+      _show(null);
+    } else {
+      _changes.add(_current);
+    }
+  }
+
+  /// Shows the follow-up, and records that it was seen — only when the app
+  /// is on screen, so "seen" is true.
+  Future<void> _present(SafetyCheck c) async {
+    if (!_inForeground()) return _show(c);
+    final SafetyCheck seen = c.presented(now());
+    if (!identical(seen, c)) await _checks.put(seen);
+    _show(seen);
+  }
+
+  /// Open escalations whose journey has ended close with it.
+  Future<void> _closeEnded(String uid) async {
+    for (final SafetyCheck c in await _checks.forUser(uid)) {
+      if (c.isOpenEscalation && await _active(c.journeyId) == false) {
+        await _resolve(c, EscalationResolution.journeyEnded, now());
+      }
+    }
+  }
+
+  static SafetyCheck? _newest(
+    List<SafetyCheck> all,
+    bool Function(SafetyCheck) where,
+  ) {
+    SafetyCheck? newest;
+    for (final SafetyCheck c in all) {
+      if (!where(c)) continue;
+      if (newest == null || c.deadline.isAfter(newest.deadline)) newest = c;
+    }
+    return newest;
   }
 
   /// Asks about the newest eligible incident, unless a check is pending.
@@ -270,6 +406,9 @@ class SafetyCheckService {
         status: SafetyCheckStatus.pending,
         startedAt: at,
         deadline: at.add(duration),
+        incidentType: i.type,
+        incidentConfidence: i.confidence,
+        incidentDetectedAt: i.detectedAt,
       );
       await _checks.put(check);
       await _incidents.put(
@@ -309,7 +448,7 @@ class SafetyCheckService {
     await _handOver(timedOut);
   }
 
-  /// Timed out → escalation-ready: `EscalationSync` picks it up.
+  /// Timed out → escalation prepared: one record, and the follow-up shown.
   Future<void> _handOver(SafetyCheck c) async {
     final DateTime at = now();
     await _setIncident(
@@ -317,7 +456,7 @@ class SafetyCheckService {
       (PotentialIncident i) =>
           i.copyWith(status: IncidentStatus.escalationReady, updatedAt: at),
     );
-    _show(
+    await _present(
       await _write(
         c,
         SafetyCheckStatus.escalationReady,
@@ -345,13 +484,17 @@ class SafetyCheckService {
     if (_current?.id == c.id) _show(null);
   }
 
-  /// The pending check's journey ended (completed or cancelled).
+  /// A journey ended (completed or cancelled): its pending check is
+  /// cancelled, and its open escalation closed.
   Future<void> _journeyEnded() async {
     final SafetyCheck? c = _current;
-    if (c == null || c.status != SafetyCheckStatus.pending) return;
-    if (await _active(c.journeyId) == false) {
+    if (c != null &&
+        c.status == SafetyCheckStatus.pending &&
+        await _active(c.journeyId) == false) {
       await _cancel(c, SafetyCheckCancelReason.journeyEnded);
     }
+    final String? uid = await _uid();
+    if (uid != null) await _closeEnded(uid);
   }
 
   /// Signed out, or another account: its pending check is cancelled.
@@ -420,7 +563,9 @@ class SafetyCheckService {
 
   /// Keeps the notification in step with [current]: none while the app is
   /// on screen, and never one that a failure here could turn into a broken
-  /// check — the countdown does not depend on it.
+  /// check — the countdown does not depend on it. **Asking is not showing:**
+  /// a notice the phone refused (notifications off, the channel blocked) or
+  /// that failed is not remembered as shown, so the next change tries again.
   Future<void> _notice() async {
     final SafetyCheck? c = _current;
     final String? want = c == null || _inForeground()
@@ -429,16 +574,22 @@ class SafetyCheckService {
     if (want == _noticed) return;
     _noticed = want;
     try {
-      if (want == null) {
-        await _notifications.clear();
-      } else if (c!.status == SafetyCheckStatus.pending) {
-        await _notifications.asking(c);
-      } else {
-        await _notifications.noAnswer();
-      }
+      final bool shown = switch (want) {
+        null => await _clearNotice(),
+        _ when c!.status == SafetyCheckStatus.pending =>
+          await _notifications.asking(c),
+        _ => await _notifications.noAnswer(c),
+      };
+      if (!shown && _noticed == want) _noticed = null;
     } on Object catch (e) {
+      if (_noticed == want) _noticed = null;
       debugPrint('Safety notice: not updated (${e.runtimeType})');
     }
+  }
+
+  Future<bool> _clearNotice() async {
+    await _notifications.clear();
+    return true;
   }
 
   /// Runs [step] after every earlier one; its error never escapes.

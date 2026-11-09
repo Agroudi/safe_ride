@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/country/country_cubit.dart';
@@ -33,6 +34,7 @@ import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/plan_journey_cubit.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_tile_body.dart';
 import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/open_escalation_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/incident_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/tracking_cubit.dart';
 import '../../../core/country/country_fakes.dart';
@@ -106,6 +108,9 @@ void main() {
       ..registerFactory<TrackingCubit>(
         () => TrackingCubit(sl<JourneyTracker>()),
       )
+      ..registerFactory<OpenEscalationCubit>(
+        () => OpenEscalationCubit(NoEscalations()),
+      )
       ..registerFactory<IncidentCubit>(
         () => IncidentCubit(MemoryIncidentRepository(), _Session()),
       )
@@ -135,6 +140,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: BlocProvider<PreferencesCubit>.value(
           value: prefs,
           child: ScreenUtilInit(
@@ -181,14 +187,12 @@ void main() {
     expect(find.textContaining('Ahmed'), findsNothing);
     expect(text('home.recent.emptyTitle'), findsOneWidget);
     expect(text('home.recent.seeAll'), findsNothing);
-    // Journey Sharing is planned and not tappable; the two built features
-    // are links.
-    expect(text('home.safety.planned'), findsOneWidget);
+    // All three safety features are links.
     Finder tappable(String key) => find.ancestor(
       of: text('home.safety.$key.title'),
       matching: find.byType(InkWell),
     );
-    expect(tappable('sharing'), findsNothing);
+    expect(tappable('sharing'), findsOneWidget);
     expect(tappable('contacts'), findsOneWidget);
     expect(tappable('resources'), findsOneWidget);
   });

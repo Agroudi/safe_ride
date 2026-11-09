@@ -58,6 +58,19 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- A share's link and an invite's open the app when it is installed,
+                 and their web pages otherwise. autoVerify needs .well-known/assetlinks.json
+                 live on this host, listing the app's signing key
+                 (docs/location-sharing.md). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="saferide-a9d9f.web.app"/>
+                <data android:path="/s"/>
+                <data android:path="/c"/>
+            </intent-filter>
         </activity>
         <!-- "I'm safe" on a safety-check notification. No full-screen intent:
              Android keeps USE_FULL_SCREEN_INTENT for calls and alarm clocks,
@@ -83,6 +96,14 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="tel"/>
+        </intent>
+        <!-- A trusted contact's Message: lets url_launcher ask whether
+             anything writes text messages before opening the messaging app
+             with the text ready. SafeRide sends nothing itself: no SMS
+             permission. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="sms"/>
         </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>

@@ -23,9 +23,9 @@
         "body": "SafeRide is designed around one goal: helping you feel safe and confident on every trip."
       },
       "two": {
-        "eyebrow": "COMING SOON",
+        "eyebrow": "YOUR CHOICE",
         "title": "Stay Connected",
-        "body": "Sharing your journey with the people you trust is coming soon. It isn't available in this version yet."
+        "body": "Share your location or a journey in progress through a private link, only when you choose to."
       },
       "three": {
         "eyebrow": "ONE PLACE",
@@ -140,10 +140,9 @@
     },
     "safety": {
       "title": "Safety features",
-      "planned": "Planned",
       "sharing": {
-        "title": "Journey Sharing",
-        "body": "Share a journey with people you trust. It isn't available yet."
+        "title": "Share My Location",
+        "body": "Send a private link that shows where you are, for as long as you choose."
       },
       "contacts": {
         "title": "Trusted Contacts",
@@ -235,7 +234,7 @@
     },
     "delete": {
       "title": "Delete account",
-      "intro": "This deletes your SafeRide account for good: your profile, journeys, recorded routes, trusted contacts and safety records, in your account and on this phone. It can't be undone.",
+      "intro": "This deletes your SafeRide account for good: your profile, journeys, recorded routes, sharing links, trusted contacts, connections and safety records, in your account and on this phone. It can't be undone.",
       "note": "You need an internet connection. Any journey in progress stops being recorded. Your language and appearance stay on this phone.",
       "password": "Your password",
       "submit": "Delete my account",
@@ -288,7 +287,7 @@
     "from": "From",
     "to": "To",
     "route": "{from} to {to}",
-    "notTracked": "SafeRide records your location only while a journey you started is in progress, and only with your permission. No one watches it and no one is alerted.",
+    "notTracked": "SafeRide records your location only while a journey you started is in progress, and only with your permission. No one sees it unless you share it, and no one is alerted.",
     "plan": {
       "title": "Plan a journey",
       "fromLabel": "Starting point",
@@ -387,7 +386,7 @@
       "complete": "Every point is confirmed. You're ready to start.",
       "start": "Start journey",
       "notNow": "Not now",
-      "note": "Starting marks the journey as in progress and, with your permission, records its route in your account. No one watches it.",
+      "note": "Starting marks the journey as in progress and, with your permission, records its route in your account. No one sees it unless you share it.",
       "unavailable": "This journey can't be started",
       "v1": {
         "vehicle": "The vehicle is in good condition: lights, mirrors and seatbelts work.",
@@ -437,7 +436,7 @@
       "needs": {
         "denied": {
           "title": "Allow location to record this journey",
-          "body": "SafeRide uses your location only while this journey is in progress, to record its route, speed and distance in your account. A notice stays in your notifications while it records, and it stops when you complete or cancel the journey. No one watches it and no one is alerted.",
+          "body": "SafeRide uses your location only while this journey is in progress, to record its route, speed and distance in your account. A notice stays in your notifications while it records, and it stops when you complete or cancel the journey. No one sees it unless you share it, and no one is alerted.",
           "action": "Allow location"
         },
         "deniedForever": {
@@ -499,6 +498,10 @@
         "noAnswer": "You didn't answer in time. No one has been alerted.",
         "off": "Notifications are off, so SafeRide can only ask if you're okay while it is on screen.",
         "turnOn": "Turn on notifications"
+      },
+      "followUp": {
+        "okay": "I'm okay",
+        "help": "Get help"
       }
     },
     "escalation": {
@@ -514,16 +517,76 @@
       "rejected": "Nobody was alerted. SafeRide's server didn't send this alert.",
       "serviceUnavailable": "Your trusted contacts could not be alerted: SafeRide's alert service isn't available. Nothing was sent to anyone. The record stays on this phone. If you need help, contact someone yourself.",
       "retry": "Try again"
+    },
+    "map": {
+      "start": "Start",
+      "destination": "Destination",
+      "you": "Your position",
+      "pickStart": "Choose on the map",
+      "pickDestination": "Choose on the map",
+      "onMap": "Set on the map. Change",
+      "choose": "Search, or tap the map",
+      "naming": "Finding this place…",
+      "pinned": "Pinned location",
+      "useLocation": "Use my location",
+      "confirm": "Confirm this place",
+      "retry": "Try again",
+      "offline": "The map can't load right now. Your journey and its recording aren't affected.",
+      "open": "Open live map",
+      "openRecorded": "View route on the map",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "recenter": "Follow my position",
+      "speed": "Speed",
+      "travelled": "Travelled",
+      "remaining": "Remaining (estimate)",
+      "arrival": "Arrival (estimate)",
+      "noValue": "Not available",
+      "status": {
+        "recording": "Recording",
+        "weakSignal": "Weak GPS signal",
+        "unavailable": "Location unavailable for now",
+        "interrupted": "Tracking interrupted",
+        "resumed": "Tracking resumed",
+        "completed": "Journey ended"
+      },
+      "search": {
+        "startHint": "Search for a starting point",
+        "destinationHint": "Search for a destination",
+        "clear": "Clear search",
+        "empty": "No places found. Try other words, or tap the map.",
+        "offline": "Search needs a connection. You can still tap the map, or type the place in the form.",
+        "failed": "Search isn't available right now. You can still tap the map."
+      },
+      "route": {
+        "loading": "Finding a route…",
+        "summary": "About {distance}, {duration} by car (estimate)",
+        "distanceOnly": "About {distance} (estimate)",
+        "noRoute": "No road route was found between these places. They're saved, and you can still plan the journey.",
+        "offline": "The route can't load without a connection. Your places are kept, and you can still plan the journey.",
+        "unavailable": "The route preview isn't available right now. Your places are kept, and you can still plan the journey."
+      },
+      "location": {
+        "denied": "SafeRide needs your permission to use your location here.",
+        "deniedForever": "Location is off for SafeRide. You can allow it in the phone's settings.",
+        "approximate": "Only your approximate location is allowed, which is too far off to use here.",
+        "serviceOff": "Your location isn't available. Check that location is on.",
+        "settings": "Open settings"
+      }
+    },
+    "escalationNote": {
+      "title": "No answer was recorded at {time}",
+      "body": "Nobody has been contacted. If you're okay, say so. If you need help, the ways to reach it yourself are one tap away."
     }
   },
   "safety": {
     "title": "Safety Center",
     "subtitle": "Your safety tools, in one place.",
-    "note": "SafeRide doesn't alert your contacts, call emergency services or share your location. If you need help, contact someone yourself.",
+    "note": "SafeRide doesn't alert your contacts or call emergency services. If you need help, contact someone yourself.",
     "entries": {
       "contacts": {
         "title": "Trusted Contacts",
-        "body": "The people you would reach out to."
+        "body": "The people you connect with, and numbers you keep."
       },
       "guide": {
         "title": "Safety Guide",
@@ -544,12 +607,16 @@
       "invite": {
         "title": "Enter an invite code",
         "body": "Someone gave you a code? Become their trusted contact."
+      },
+      "share": {
+        "title": "Share my location",
+        "body": "A private live link, for as long as you choose."
       }
     },
     "contacts": {
       "title": "Trusted Contacts",
       "add": "Add a contact",
-      "notice": "Contacts are kept in your SafeRide account. SafeRide doesn't verify their numbers or send them anything.",
+      "notice": "These are numbers you keep for yourself, in your SafeRide account. SafeRide doesn't verify them or send them anything.",
       "empty": {
         "title": "No trusted contacts yet",
         "body": "Add the people you would call if something went wrong."
@@ -596,7 +663,8 @@
         "network": "SafeRide couldn't connect. Check your connection and try again."
       },
       "alertsOn": "Can receive alerts",
-      "alertsOff": "Can't receive alerts yet"
+      "alertsOff": "Can't receive alerts yet",
+      "heading": "Saved numbers"
     },
     "guide": {
       "title": "Safety Guide",
@@ -640,11 +708,11 @@
         "checklist": "Asks you to confirm a safety checklist before each journey starts.",
         "route": "Records your route, speed and distance while a journey you started is in progress, with your permission.",
         "status": "Keeps your journeys in your account; you start each one and mark it completed or cancelled yourself.",
-        "check": "Asks if you're okay when it notices unusual movement, on screen or as a notification."
+        "check": "Asks if you're okay when it notices unusual movement, on screen or as a notification.",
+        "share": "Lets you share your location or a journey in progress through a private link you control."
       },
       "cannot": {
         "title": "Not available yet",
-        "sharing": "Sharing a journey or your location with your trusted contacts.",
         "alerts": "Alerting your trusted contacts, calling emergency services, or calling anyone for you."
       },
       "plan": "Plan a journey",
@@ -663,9 +731,9 @@
       "services": {
         "general": "Emergency",
         "police": "Police",
-        "ambulance": "Ambulance",
-        "fire": "Fire and civil defense",
-        "traffic": "Traffic accidents",
+        "ambulance": "Ambulance / medical emergency",
+        "fire": "Civil defence / fire and rescue",
+        "traffic": "Traffic / road accidents",
         "roadSecurity": "Road security"
       },
       "inline": {
@@ -687,9 +755,9 @@
       },
       "joined": "{list} and {last}",
       "call": "Call",
-      "callNote": "Call opens your phone app with the number ready. You place the call yourself, and SafeRide can't see whether it goes through.",
+      "callNote": "Call opens your phone app with the number ready. You press call yourself, or cancel. SafeRide can't see whether the call connects or is answered, and it sends nothing to the emergency service.",
       "secondary": "Only foreign governments' travel advice lists this number. Confirm it locally.",
-      "checked": "Checked against official sources on {date}:",
+      "checked": "Checked on {date} against these sources (an official body, or a newspaper reporting one):",
       "unavailable": {
         "title": "No checked numbers yet",
         "body": "SafeRide hasn't verified the emergency numbers for {country}. Ask locally for the emergency number where you are."
@@ -711,6 +779,10 @@
           "title": "This number can't be dialled from SafeRide",
           "message": "Dial {number} yourself in your phone app."
         }
+      },
+      "missing": {
+        "none": "SafeRide has no checked number of its own for {services} in {country}.",
+        "call": "If anyone is hurt or in danger, call {number}."
       }
     },
     "invite": {
@@ -750,6 +822,273 @@
         "title": "Alerts couldn't be loaded",
         "body": "Check your connection and try again."
       }
+    },
+    "connections": {
+      "heading": "Connected people",
+      "notice": "A connection links your SafeRide account with someone else's. It shares nothing by itself: no phone number, no location and no journeys. Sharing your location stays your own choice, by a link you make.",
+      "stale": "You're offline, so this list may be out of date.",
+      "empty": {
+        "title": "No one connected yet",
+        "body": "Invite someone who has a SafeRide account. They accept from a private link, and then you each see the other here. Nothing else is shared."
+      },
+      "failed": {
+        "title": "Your connections couldn't be loaded",
+        "body": "Check your connection and try again.",
+        "retry": "Try again"
+      },
+      "invite": "Invite someone",
+      "haveInvite": "I have an invite",
+      "status": {
+        "pending": "Waiting",
+        "accepted": "Connected",
+        "revoked": "Ended",
+        "expired": "Expired"
+      },
+      "since": "Connected {date}",
+      "nothingShared": "Sees nothing of yours automatically",
+      "manage": "Manage",
+      "remove": "Remove",
+      "invites": {
+        "heading": "Invitations",
+        "expires": "Expires {date}",
+        "expired": "Expired {date}",
+        "copy": "Copy link",
+        "share": "Share",
+        "copied": "Link copied",
+        "cancel": "Cancel",
+        "clear": "Clear",
+        "message": "{name} invited you to connect on SafeRide. Open this private link within 3 days: {link}",
+        "created": {
+          "title": "Invite ready",
+          "body": "Anyone with the link can accept it, once. Send it only to the person you mean."
+        },
+        "cancelled": "Invite cancelled. Its link no longer works.",
+        "cancelConfirm": {
+          "title": "Cancel this invite?",
+          "body": "Its link will stop working. Anyone who already has it will see that it can no longer be used.",
+          "confirm": "Cancel invite",
+          "keep": "Keep it"
+        }
+      },
+      "ended": {
+        "heading": "Ended",
+        "on": "Ended {date}",
+        "clear": "Clear"
+      },
+      "removeConfirm": {
+        "title": "Remove {name}?",
+        "body": "This ends the connection for both of you, straight away. It can't undo anything already seen, copied or saved. A location or journey link you sent is separate: this doesn't stop it, so stop it in Sharing if you need to.",
+        "confirm": "Remove",
+        "keep": "Keep"
+      },
+      "removed": {
+        "title": "{name} removed",
+        "body": "The connection has ended for both of you. Any sharing link you sent is still running until you stop it."
+      },
+      "manageScreen": {
+        "title": "Connection",
+        "accessHeading": "What this connection allows",
+        "separate": "Sharing your location is separate from a connection: it happens only through a link you make, and ending one never ends the other.",
+        "nicknameLabel": "Your name for them (optional)",
+        "nicknameHelper": "Only you see this.",
+        "save": "Save",
+        "saved": "Saved",
+        "gone": {
+          "title": "This connection has ended",
+          "body": "It was removed, from this phone or by the other person."
+        }
+      },
+      "access": {
+        "liveLocation": {
+          "title": "Live location: no",
+          "body": "Only through a link you choose to send."
+        },
+        "journeyHistory": {
+          "title": "Your journeys: no",
+          "body": "Your past and planned journeys stay in your account."
+        },
+        "gpsHistory": {
+          "title": "Recorded routes: no",
+          "body": "A route you recorded stays in your account."
+        },
+        "emergencyInformation": {
+          "title": "Emergency information: no",
+          "body": "Nothing about your safety checks reaches them."
+        },
+        "safetyAlerts": {
+          "title": "Safety alerts: not available",
+          "body": "SafeRide can't alert anyone yet, so this person won't be told if you need help."
+        }
+      },
+      "accept": {
+        "title": "Accept an invite",
+        "entryNote": "Paste the invite link someone sent you. Accepting it connects the account you're signed in to.",
+        "linkLabel": "Invite link",
+        "continue": "Continue",
+        "invited": "{name} invited you to connect",
+        "meansTitle": "If you accept",
+        "meansName": "You each see the other's name, in your Trusted Contacts.",
+        "meansNothing": "Neither of you sees the other's location or journeys.",
+        "meansEnd": "Either of you can end it at any time.",
+        "onlyIfKnown": "Only accept an invite from someone you know. SafeRide doesn't verify names.",
+        "accept": "Accept",
+        "notNow": "Not now",
+        "again": "Try again",
+        "another": "Enter another invite",
+        "done": {
+          "title": "Connected with {name}",
+          "body": "Nothing else is shared between you."
+        },
+        "signedOut": {
+          "title": "Sign in first",
+          "body": "An invite is accepted with your SafeRide account. Sign in or create one, then open the invite link again.",
+          "action": "Open SafeRide"
+        }
+      },
+      "errors": {
+        "signedOut": {
+          "title": "Sign in first",
+          "body": "This needs your SafeRide account."
+        },
+        "invalid": {
+          "title": "That isn't an invite",
+          "body": "Check that you copied the whole link."
+        },
+        "noLongerValid": {
+          "title": "This invite can't be used",
+          "body": "It may have expired, been used or been cancelled. Ask for a new one."
+        },
+        "ownInvite": {
+          "title": "This is your own invite",
+          "body": "Send it to the person you want to connect with."
+        },
+        "alreadyConnected": {
+          "title": "You're already connected",
+          "body": "You can see this person in Trusted Contacts."
+        },
+        "profileMissing": {
+          "title": "Your profile isn't ready",
+          "body": "Open your profile, save your name, and try again."
+        },
+        "tooMany": {
+          "title": "Too many for now",
+          "body": "You can have 5 invites waiting and 20 people connected. Cancel an invite or remove someone first."
+        },
+        "offline": {
+          "title": "Couldn't reach SafeRide",
+          "body": "SafeRide couldn't confirm this, and nothing will be sent later by itself. Check your connection and try again."
+        },
+        "unavailable": {
+          "title": "Not available yet",
+          "body": "SafeRide can't do this right now, and nothing was changed. Try again later."
+        }
+      }
+    },
+    "help": {
+      "title": "Get help",
+      "none": "SafeRide can't call anyone or alert your contacts for you. These are the ways to reach help yourself.",
+      "open": {
+        "title": "No answer was recorded at {time}",
+        "body": "That doesn't mean anything happened, and nobody has been contacted: SafeRide can't alert anyone or call for help. If you're okay, say so. If you need help, use the options below."
+      },
+      "okay": "I'm okay",
+      "okayDone": "Thanks. Glad you're okay.",
+      "emergency": {
+        "heading": "Emergency numbers",
+        "more": "Emergency information"
+      },
+      "share": {
+        "heading": "Share where you are",
+        "note": "Only if you choose to: SafeRide makes a private link, and you send it yourself. Nothing is shared until you start it.",
+        "action": "Share this journey"
+      },
+      "people": {
+        "heading": "Your people",
+        "none": "You haven't added anyone yet. Saved numbers and connected people appear here.",
+        "cannotAlert": "SafeRide can't alert connected people for you, and a connection doesn't share their phone number. To call or text them, save their number yourself.",
+        "failed": "Some of your contacts couldn't be loaded.",
+        "call": "Call",
+        "manage": "Trusted Contacts",
+        "messageNote": "Message opens your messaging app with a short text you can change. It has no location in it: to send where you are, share this journey and send its link yourself."
+      }
+    },
+    "location": {
+      "heading": "Where you are",
+      "current": "Current location",
+      "lastKnown": "Last known location",
+      "age": {
+        "seconds": {
+          "one": "{count} second ago",
+          "other": "{count} seconds ago"
+        },
+        "minutes": {
+          "one": "{count} minute ago",
+          "other": "{count} minutes ago"
+        },
+        "hours": {
+          "one": "{count} hour ago",
+          "other": "{count} hours ago"
+        }
+      },
+      "accuracy": {
+        "within": "Accurate to about {meters} m.",
+        "poor": "Rough: it could be {meters} m off or more.",
+        "unknown": "Your phone didn't say how accurate this is."
+      },
+      "stale": "This is old: you may be far from here now.",
+      "approximate": "Only your approximate location is allowed, so it can be kilometres off.",
+      "notAllowed": "SafeRide isn't allowed to read your location. Describe where you are instead.",
+      "servicesOff": "Your phone's location is off. Describe where you are instead.",
+      "none": "No location yet.",
+      "notFound": "Your phone didn't give a location. Try again, outdoors if you can.",
+      "journey": "Journey in progress to {destination}",
+      "find": "Find my location",
+      "update": "Update my location",
+      "copy": "Copy coordinates",
+      "copied": "Coordinates copied",
+      "note": "SafeRide doesn't send your location to emergency services, and they can't see it here. If they ask, read these out or describe where you are: the road, the direction, a landmark."
+    },
+    "guidance": {
+      "which": {
+        "title": "Which service?",
+        "ambulance": "Ambulance: someone is badly hurt, unconscious, bleeding heavily or struggling to breathe.",
+        "police": "Police: a crash with danger on the road, a crime, a threat, or someone's safety at risk.",
+        "fire": "Civil defence: fire, smoke, a fuel leak, or someone trapped in a vehicle."
+      },
+      "calling": {
+        "title": "On the call",
+        "where": "Say where you are first: the road, the direction you were going, the nearest exit or landmark.",
+        "stay": "Stay on the line and do what the operator tells you.",
+        "location": "SafeRide can't make sure emergency services get your location. Tell them yourself.",
+        "rely": "Don't rely on SafeRide alone. If the app doesn't work, dial the number yourself."
+      }
+    },
+    "reach": {
+      "call": "Call",
+      "message": "Message",
+      "callLabel": "Call {name}",
+      "messageLabel": "Text {name}",
+      "missing": "No number saved for them.",
+      "invalid": "This number can't be used from SafeRide. Dial it yourself, or edit it.",
+      "body": "I may need assistance. Please contact me as soon as possible.",
+      "compose": {
+        "opened": {
+          "title": "Your messaging app opened",
+          "message": "Your text to {name} is ready there. Change it if you like, then send it yourself. SafeRide can't see whether it was sent."
+        },
+        "noMessaging": {
+          "title": "This device can't send text messages",
+          "message": "Text {name} from a phone."
+        },
+        "failed": {
+          "title": "Your messaging app didn't open",
+          "message": "Text {name} yourself."
+        },
+        "invalidNumber": {
+          "title": "This number can't be used from SafeRide",
+          "message": "Text {name} yourself in your messaging app."
+        }
+      }
     }
   },
   "about": {
@@ -760,13 +1099,14 @@
       "account": "Your name, email and optional phone number, in your SafeRide account. Your password is checked by Firebase Authentication; SafeRide never stores it.",
       "journeys": "Your journeys and their status, in your account.",
       "route": "The route of a journey you started (its points, distance and times), recorded only while it was in progress and with your permission, in your account.",
-      "contacts": "Your trusted contacts, in your account.",
+      "contacts": "Your saved numbers and who you connected with, in your account. A connection shows each of you the other's name and nothing else.",
       "preferences": "Your language and appearance stay on this phone.",
-      "safety": "If you don't answer a safety check: what kind of event it was and when, on this phone only."
+      "safety": "If you don't answer a safety check: what kind of event it was and when, on this phone only.",
+      "mapProviders": "When you search or preview a route, those places go to the map services (Photon, OSRM, OpenFreeMap) that answer. Your recorded route is never sent to them.",
+      "sharing": "While you share, your position and what you chose to show are kept on a link anyone holding it can open, until it ends. Nothing identifies you there."
     },
     "notYet": {
       "title": "Not part of this version",
-      "sharing": "Sharing your location or your journeys with anyone.",
       "alerts": "Alerting your trusted contacts, calling emergency services, or calling anyone on your behalf."
     },
     "deviceNote": "Your account is kept on Firebase, Google's cloud service, so it follows you to another phone. Signing out or removing the app doesn't delete it; Delete account in Profile does.",
@@ -775,6 +1115,125 @@
       "works": "Works: signing in stays active, emergency numbers, the safety guide, recording a journey in progress, and the safety check.",
       "saved": "Saved on this phone and sent later: journeys, contacts and route points. They can look saved before your account has them.",
       "needs": "Needs a connection: signing in, creating an account, resetting a password and deleting your account. Lists show what this phone last saw."
+    }
+  },
+  "sharing": {
+    "notice": {
+      "title": "SafeRide is sharing your location",
+      "text": "Your location is sent to your private link until you stop sharing or it ends."
+    },
+    "notEmergency": "Sharing isn't an emergency service. SafeRide doesn't watch the map, and nobody is alerted.",
+    "duration": {
+      "minutes15": "15 minutes",
+      "minutes30": "30 minutes",
+      "hour1": "1 hour",
+      "hours3": "3 hours",
+      "untilFinished": "Until the journey finishes (at most 12 hours)"
+    },
+    "start": {
+      "location": {
+        "title": "Share my location",
+        "intro": "Create a private link that shows where you are, live, to the people you send it to. They don't need an account."
+      },
+      "journey": {
+        "title": "Share this journey",
+        "intro": "Create a private link that shows this journey, live, to the people you send it to. They don't need an account. It stops when the journey ends."
+      },
+      "seesTitle": "Anyone with the link can see",
+      "sees": {
+        "position": "Where you are now, and when that was last updated",
+        "ends": "The journey's start and destination, in your own words",
+        "route": "The route recorded so far, and the distance travelled",
+        "status": "Whether sharing is live, paused or finished"
+      },
+      "neverTitle": "They never see",
+      "never": "Your name, email, phone number, contacts, other journeys or safety checks.",
+      "durationTitle": "Stop sharing after",
+      "privacy": "This link works for anyone who has it, until it ends. Send it only to people you trust.",
+      "action": "Start sharing"
+    },
+    "delivery": {
+      "waiting": "Waiting for your location",
+      "reaching": "Updates are reaching your link",
+      "notReaching": "Updates aren't getting through right now",
+      "paused": "Location unavailable: sharing is paused"
+    },
+    "manage": {
+      "title": "Manage sharing",
+      "location": "You're sharing your location.",
+      "journey": "You're sharing this journey: your location, its start and destination, and its route.",
+      "ends": "Ends at {time}",
+      "lastUpdate": "Last update sent at {time}",
+      "share": "Send the link",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "message": "Follow my location on SafeRide: {link}",
+      "stop": "Stop sharing",
+      "stopConfirm": {
+        "title": "Stop sharing?",
+        "body": "The link stops working. What someone has already seen can't be taken back.",
+        "keep": "Keep sharing"
+      },
+      "privacy": "Anyone with this link can see it until it ends. Stopping ends the link, but can't erase what was already seen, screenshots included."
+    },
+    "stopped": {
+      "title": "Sharing stopped",
+      "body": "The link no longer works.",
+      "offline": "Nothing more is being sent. The link ends once you're back online, or at its end time."
+    },
+    "failed": {
+      "signedOut": {
+        "title": "Sign in to share",
+        "body": "Sharing needs your account."
+      },
+      "offline": {
+        "title": "No connection",
+        "body": "Sharing needs a connection to start. Nothing was shared."
+      },
+      "unavailable": {
+        "title": "Sharing isn't available yet",
+        "body": "A link couldn't be confirmed to work, so none was created. Nothing was shared."
+      },
+      "refused": {
+        "title": "Sharing couldn't start",
+        "body": "The server refused it. Check that your phone's date and time are correct."
+      },
+      "noAccess": {
+        "title": "Location is needed",
+        "body": "Allow precise location for SafeRide to share where you are."
+      },
+      "alreadySharing": {
+        "title": "Already sharing",
+        "body": "Stop the current share before starting another."
+      },
+      "notActive": {
+        "title": "This journey isn't in progress",
+        "body": "Only a journey in progress can be shared."
+      }
+    },
+    "view": {
+      "location": "Shared location",
+      "journey": "Shared journey",
+      "position": "Their position",
+      "status": {
+        "waiting": "Waiting for a location",
+        "live": "Live",
+        "paused": "Location unavailable",
+        "stale": "Not up to date",
+        "offline": "You're offline: not up to date",
+        "finished": "Journey finished"
+      },
+      "updated": "Last updated at {time}",
+      "travelled": "Travelled: {distance}",
+      "ends": "Link ends at {time}",
+      "ended": {
+        "title": "This share has ended",
+        "body": "It was stopped or it expired, or the link isn't valid."
+      },
+      "unreachable": {
+        "title": "Can't load this share",
+        "body": "Check your connection and open the link again."
+      }
     }
   }
 }

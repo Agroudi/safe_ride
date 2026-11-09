@@ -21,12 +21,18 @@ class UserCollection<T> {
     required FirebaseFirestore db,
     required String Function(String uid) path,
     required T Function(String id, Map<String, dynamic> data) read,
-    Query<Map<String, dynamic>> Function(Query<Map<String, dynamic>>)? query,
+    Query<Map<String, dynamic>> Function(
+      Query<Map<String, dynamic>> all,
+      String uid,
+    )?
+    query,
+    bool watchFreshness = false,
     DateTime Function()? clock,
   }) : _db = db,
        _path = path,
        _read = read,
        _query = query,
+       _watchFreshness = watchFreshness,
        _clock = clock ?? DateTime.now;
 
   /// How long a failed listener stays failed.
@@ -35,8 +41,12 @@ class UserCollection<T> {
   final FirebaseFirestore _db;
   final String Function(String uid) _path;
   final T Function(String id, Map<String, dynamic> data) _read;
-  final Query<Map<String, dynamic>> Function(Query<Map<String, dynamic>>)?
+  final Query<Map<String, dynamic>> Function(
+    Query<Map<String, dynamic>> all,
+    String uid,
+  )?
   _query;
+  final bool _watchFreshness;
   final DateTime Function() _clock;
   final StreamController<void> _changes = StreamController<void>.broadcast();
   _Watch<T>? _watch;
@@ -44,6 +54,11 @@ class UserCollection<T> {
 
   /// Fires on every snapshot the listener delivers.
   Stream<void> get changes => _changes.stream;
+
+  /// Whether what [items] returned is the phone's copy, not yet confirmed by
+  /// the server. Follows the connection only with `watchFreshness`, which
+  /// costs an extra event each way.
+  bool get fromCache => _watch?.fromCache ?? false;
 
   CollectionReference<Map<String, dynamic>> ref(String uid) =>
       _db.collection(_path(uid));
@@ -81,29 +96,32 @@ class UserCollection<T> {
     final _Watch<T> watch = _Watch<T>(uid);
     _watch = watch;
     final Query<Map<String, dynamic>> query =
-        _query?.call(ref(uid)) ?? ref(uid);
-    watch.subscription = query.snapshots().listen(
-      (QuerySnapshot<Map<String, dynamic>> snapshot) {
-        watch.items = <T>[
-          for (final QueryDocumentSnapshot<Map<String, dynamic>> d
-              in snapshot.docs)
-            ?_readable(d),
-        ];
-        watch.error = null;
-        if (!watch.ready.isCompleted) watch.ready.complete();
-        _changes.add(null);
-      },
-      onError: (Object error) {
-        watch.error = error;
-        if (!watch.ready.isCompleted) watch.ready.complete();
-        // A failed listener is finished; a later read starts a new one.
-        if (identical(_watch, watch)) {
-          _watch = null;
-          _failed = (uid: uid, error: error, at: _clock());
-        }
-        _changes.add(null);
-      },
-    );
+        _query?.call(ref(uid), uid) ?? ref(uid);
+    watch.subscription = query
+        .snapshots(includeMetadataChanges: _watchFreshness)
+        .listen(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) {
+            watch.fromCache = snapshot.metadata.isFromCache;
+            watch.items = <T>[
+              for (final QueryDocumentSnapshot<Map<String, dynamic>> d
+                  in snapshot.docs)
+                ?_readable(d),
+            ];
+            watch.error = null;
+            if (!watch.ready.isCompleted) watch.ready.complete();
+            _changes.add(null);
+          },
+          onError: (Object error) {
+            watch.error = error;
+            if (!watch.ready.isCompleted) watch.ready.complete();
+            // A failed listener is finished; a later read starts a new one.
+            if (identical(_watch, watch)) {
+              _watch = null;
+              _failed = (uid: uid, error: error, at: _clock());
+            }
+            _changes.add(null);
+          },
+        );
     return watch;
   }
 }
@@ -115,5 +133,6 @@ class _Watch<T> {
   final Completer<void> ready = Completer<void>();
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? subscription;
   List<T> items = <T>[];
+  bool fromCache = false;
   Object? error;
 }

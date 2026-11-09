@@ -1,0 +1,139 @@
+:root {
+  --background: #f7f9fc;
+  --surface: #ffffff;
+  --text: #142b4a;
+  --muted: #5b6b80;
+  --live: #15803d;
+  --warn: #b45309;
+  --info: #1d4ed8;
+  --route: #0f766e;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1220;
+    --surface: #131c2e;
+    --text: #e6edf7;
+    --muted: #9fb0c6;
+    --live: #4ade80;
+    --warn: #fbbf24;
+    --info: #93c5fd;
+    --route: #5eead4;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Arabic', sans-serif;
+}
+
+#map {
+  position: fixed;
+  inset: 0;
+}
+
+#panel {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 20%);
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid currentcolor;
+  font-weight: 600;
+}
+
+#status[data-tone='live'] {
+  color: var(--live);
+}
+
+#status[data-tone='warn'] {
+  color: var(--warn);
+}
+
+#status[data-tone='info'] {
+  color: var(--info);
+}
+
+#details {
+  white-space: pre-line;
+}
+
+#message {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: var(--background);
+}
+
+#message[hidden] {
+  display: none;
+}
+
+/* The credit sits on MapLibre's light box in either theme. */
+.maplibregl-ctrl-attrib {
+  background: #fff;
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib a {
+  color: #142b4a;
+}
+
+.dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: #2563eb;
+  box-shadow: 0 0 10px rgb(37 99 235 / 45%);
+}
+
+.dot[data-live='false'] {
+  opacity: 0.55;
+}
+
+.end {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: var(--route);
+}
+
+.end[data-kind='destination'] {
+  border-radius: 3px;
+  background: #142b4a;
+}

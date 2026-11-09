@@ -1,6 +1,7 @@
 // Tests for firestore.rules — run with `npm test` in this folder (needs the
 // Firebase CLI and JDK 21 for the emulator). Every rule the app relies on is
 // checked from both sides: what the owner may do, and what nobody may.
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import {
@@ -12,12 +13,16 @@ import {
   Timestamp,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
+  query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -522,6 +527,697 @@ describe('escalation requests', () => {
     await assertFails(
       updateDoc(doc(sara(), 'users/sara/incidents/e1'), { type: 'suddenDeceleration' }),
     );
+  });
+});
+
+describe('a journey\'s places', () => {
+  const place = (extra = {}) => ({ name: 'Riyadh', lat: 24.7, lng: 46.7, ...extra });
+
+  test('a journey may carry places and an estimate, or none', async () => {
+    await assertSucceeds(setDoc(doc(sara(), 'users/sara/journeys/j1'), journey({
+      originPlace: place({ address: 'Olaya', placeId: 'N123' }),
+      destinationPlace: place(),
+      plannedDistanceMeters: 1200.5,
+      plannedDurationSeconds: 300,
+    })));
+    await assertSucceeds(setDoc(doc(sara(), 'users/sara/journeys/j2'), journey()));
+  });
+
+  test('coordinates out of range or not numbers are refused', async () => {
+    const ref = doc(sara(), 'users/sara/journeys/j1');
+    await assertFails(setDoc(ref, journey({ originPlace: place({ lat: 91 }) })));
+    await assertFails(setDoc(ref, journey({ originPlace: place({ lng: -181 }) })));
+    await assertFails(setDoc(ref, journey({ destinationPlace: place({ lat: '24' }) })));
+    const { lat, ...noLat } = place();
+    await assertFails(setDoc(ref, journey({ originPlace: noLat })));
+  });
+
+  test('nothing rides along in a place', async () => {
+    const ref = doc(sara(), 'users/sara/journeys/j1');
+    await assertFails(setDoc(ref, journey({ originPlace: place({ uid: 'omar' }) })));
+    await assertFails(setDoc(ref, journey({ plannedDistanceMeters: -1 })));
+    await assertFails(setDoc(ref, journey({ route: [] })));
+  });
+
+  test('a planned journey can change its places; nobody else can', async () => {
+    const ref = doc(sara(), 'users/sara/journeys/j1');
+    await assertSucceeds(setDoc(ref, journey({ originPlace: place() })));
+    await assertSucceeds(updateDoc(ref, {
+      originPlace: place({ name: 'Jeddah' }),
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(omar(), 'users/sara/journeys/j1'), {
+      originPlace: place(),
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(getDoc(doc(omar(), 'users/sara/journeys/j1')));
+  });
+});
+
+describe('location and journey sharing', () => {
+  const token = 'Abc_-0123456789Abc_-0123456789Abc_-01234567';
+  const other = 'Zzz_-0123456789Zzz_-0123456789Zzz_-01234567';
+  const later = (minutes) => Timestamp.fromDate(new Date(Date.now() + minutes * 60e3));
+  const earlier = () => Timestamp.fromDate(new Date(Date.now() - 60e3));
+
+  const share = (extra = {}) => ({
+    kind: 'journey',
+    createdAt: serverTimestamp(),
+    expiresAt: later(30),
+    updatedAt: serverTimestamp(),
+    tracking: 'waiting',
+    origin: { name: 'Olaya', lat: 24.7, lng: 46.68 },
+    destination: { name: 'Airport' },
+    journeyStatus: 'active',
+    routeChunks: 0,
+    routeVersion: 0,
+    ...extra,
+  });
+  const record = (extra = {}) => ({
+    kind: 'journey',
+    journeyId: 'j1',
+    createdAt: serverTimestamp(),
+    expiresAt: later(30),
+    ...extra,
+  });
+  const located = (extra = {}) => ({
+    tracking: 'live',
+    location: { lat: 24.71, lng: 46.69, accuracy: 8, fixAt: Timestamp.now() },
+    locationAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...extra,
+  });
+
+  /// As the app creates one: both documents in one write.
+  function create(db, t = token, publicDoc = share(), ownerDoc = record(), uid = 'sara') {
+    const batch = writeBatch(db);
+    batch.set(doc(db, `shares/${t}`), publicDoc);
+    batch.set(doc(db, `users/${uid}/shares/${t}`), ownerDoc);
+    return batch.commit();
+  }
+
+  /// An open share of Sara's, as the server would hold it.
+  async function open(extra = {}) {
+    await seed(`users/sara/shares/${token}`, { kind: 'journey', journeyId: 'j1', createdAt: Timestamp.now(), expiresAt: later(30) });
+    await seed(`shares/${token}`, {
+      ...share(),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      ...extra,
+    });
+  }
+
+  test('the owner creates a share; a recipient with the link reads it', async () => {
+    await assertSucceeds(create(sara()));
+    await assertSucceeds(getDoc(doc(nobody(), `shares/${token}`)));
+    await assertSucceeds(getDoc(doc(omar(), `shares/${token}`)));
+  });
+
+  test('a current-location share carries nothing of a journey', async () => {
+    const plain = { kind: 'location', createdAt: serverTimestamp(), expiresAt: later(15), updatedAt: serverTimestamp(), tracking: 'waiting', routeChunks: 0, routeVersion: 0 };
+    const mine = { kind: 'location', createdAt: serverTimestamp(), expiresAt: later(15) };
+    await assertSucceeds(create(sara(), token, plain, mine));
+    await assertFails(create(sara(), other, { ...plain, destination: { name: 'Home' } }, mine));
+    await assertFails(create(sara(), other, plain, { ...mine, journeyId: 'j1' }));
+  });
+
+  test('nothing identifies the owner in the public document', async () => {
+    await assertFails(create(sara(), token, share({ ownerUid: 'sara' })));
+    await assertFails(create(sara(), token, share({ email: 'sara@example.com' })));
+    await assertFails(create(sara(), token, share({ journeyId: 'j1' })));
+  });
+
+  test('a share needs its owner record, in the same write', async () => {
+    await assertFails(setDoc(doc(sara(), `shares/${token}`), share()));
+    await assertFails(setDoc(doc(sara(), `users/sara/shares/${token}`), record()));
+    await assertFails(setDoc(doc(nobody(), `shares/${token}`), share()));
+    await assertFails(create(omar(), token, share(), record(), 'sara'));
+  });
+
+  test('a short or malformed token is refused', async () => {
+    await assertFails(create(sara(), 'j1'));
+    await assertFails(create(sara(), 'a'.repeat(42)));
+    await assertFails(create(sara(), `${'a'.repeat(42)}!`));
+  });
+
+  test('a share lasts at most 12 hours, and starts in the future', async () => {
+    await assertFails(create(sara(), token, share({ expiresAt: later(12 * 60 + 5) })));
+    await assertFails(create(sara(), token, share({ expiresAt: earlier() })));
+    await assertSucceeds(create(sara(), token, share({ expiresAt: later(12 * 60 - 5) })));
+  });
+
+  test('it starts with no position and a forged start is refused', async () => {
+    await assertFails(create(sara(), token, share({ tracking: 'live' })));
+    await assertFails(create(sara(), token, share(located())));
+    await assertFails(create(sara(), token, share({ createdAt: earlier() })));
+  });
+
+  test('a token already in use cannot be claimed by anyone', async () => {
+    await open();
+    await assertFails(setDoc(doc(omar(), `users/omar/shares/${token}`), record()));
+    await assertFails(create(omar(), token, share(), record(), 'omar'));
+    await assertFails(updateDoc(doc(omar(), `shares/${token}`), located()));
+    await assertFails(deleteDoc(doc(omar(), `shares/${token}`)));
+  });
+
+  test('a recipient cannot list shares, signed in or not', async () => {
+    await open();
+    await assertFails(getDocs(collection(nobody(), 'shares')));
+    await assertFails(getDocs(collection(omar(), 'shares')));
+    await assertFails(getDocs(collection(sara(), 'shares')));
+  });
+
+  test('an expired link is refused, though the document is still there', async () => {
+    await open({ expiresAt: earlier() });
+    await assertFails(getDoc(doc(nobody(), `shares/${token}`)));
+    await assertFails(getDoc(doc(omar(), `shares/${token}`)));
+    await assertFails(updateDoc(doc(sara(), `shares/${token}`), located()));
+  });
+
+  test('stopping it ends the link at once', async () => {
+    await open();
+    const db = sara();
+    const batch = writeBatch(db);
+    batch.delete(doc(db, `shares/${token}`));
+    batch.delete(doc(db, `users/sara/shares/${token}`));
+    await assertSucceeds(batch.commit());
+    await assertFails(getDoc(doc(nobody(), `shares/${token}`)));
+  });
+
+  test('an expired share can still be cleared by its owner', async () => {
+    await open({ expiresAt: earlier() });
+    await assertSucceeds(deleteDoc(doc(sara(), `shares/${token}`)));
+  });
+
+  test('the owner record cannot go first, leaving the link undeletable', async () => {
+    await open();
+    await assertFails(deleteDoc(doc(sara(), `users/sara/shares/${token}`)));
+  });
+
+  test('the owner publishes a position, stamped by the server', async () => {
+    await open();
+    await assertSucceeds(updateDoc(doc(sara(), `shares/${token}`), located()));
+    await assertFails(updateDoc(doc(sara(), `shares/${token}`), located({ locationAt: Timestamp.now() })));
+  });
+
+  test('bad coordinates and accuracy are refused', async () => {
+    await open();
+    const at = Timestamp.now();
+    for (const location of [
+      { lat: 91, lng: 46, accuracy: 8, fixAt: at },
+      { lat: 24, lng: 181, accuracy: 8, fixAt: at },
+      { lat: '24', lng: 46, accuracy: 8, fixAt: at },
+      { lat: 24, lng: 46, accuracy: 51, fixAt: at },
+      { lat: 24, lng: 46, accuracy: 0, fixAt: at },
+      { lat: 24, lng: 46, accuracy: 8, fixAt: at, speed: 9 },
+      { lat: 24, lng: 46, accuracy: 8 },
+    ]) {
+      await assertFails(updateDoc(doc(sara(), `shares/${token}`), located({ location })));
+    }
+  });
+
+  test('nobody but the owner changes anything', async () => {
+    await open();
+    for (const db of [nobody(), omar()]) {
+      await assertFails(updateDoc(doc(db, `shares/${token}`), located()));
+      await assertFails(updateDoc(doc(db, `shares/${token}`), { expiresAt: later(60), updatedAt: serverTimestamp() }));
+      await assertFails(deleteDoc(doc(db, `shares/${token}`)));
+    }
+    await assertFails(getDoc(doc(omar(), `users/sara/shares/${token}`)));
+    await assertFails(getDoc(doc(nobody(), `users/sara/shares/${token}`)));
+  });
+
+  test('the time can be shortened, never extended', async () => {
+    await open();
+    await assertFails(updateDoc(doc(sara(), `shares/${token}`), { expiresAt: later(45), updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(doc(sara(), `shares/${token}`), { expiresAt: later(10), updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(sara(), `users/sara/shares/${token}`), { expiresAt: later(45) }));
+    await assertSucceeds(updateDoc(doc(sara(), `users/sara/shares/${token}`), { expiresAt: later(10) }));
+  });
+
+  test('what it shares cannot be swapped after it starts', async () => {
+    await open();
+    for (const change of [{ kind: 'location' }, { origin: { name: 'Elsewhere' } }, { destination: { name: 'Elsewhere' } }, { createdAt: Timestamp.now() }]) {
+      await assertFails(updateDoc(doc(sara(), `shares/${token}`), { ...change, updatedAt: serverTimestamp() }));
+    }
+  });
+
+  test('a finished journey drops its position and never comes back', async () => {
+    await open(located({ updatedAt: Timestamp.now(), locationAt: Timestamp.now() }));
+    await assertSucceeds(updateDoc(doc(sara(), `shares/${token}`), {
+      journeyStatus: 'finished',
+      tracking: 'ended',
+      location: deleteField(),
+      locationAt: deleteField(),
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(sara(), `shares/${token}`), located({ journeyStatus: 'active' })));
+    await assertSucceeds(getDoc(doc(nobody(), `shares/${token}`)));
+  });
+
+  describe('the route', () => {
+    const chunk = (extra = {}) => ({
+      chunk: 0,
+      points: [{ lat: 24.7, lng: 46.68, seg: 0 }, { lat: 24.71, lng: 46.68, seg: 1 }],
+      updatedAt: serverTimestamp(),
+      ...extra,
+    });
+
+    test('the owner writes chunks; a recipient reads one, never a list', async () => {
+      await open();
+      await assertSucceeds(setDoc(doc(sara(), `shares/${token}/route/00000`), chunk()));
+      await assertSucceeds(getDoc(doc(nobody(), `shares/${token}/route/00000`)));
+      await assertFails(getDocs(collection(nobody(), `shares/${token}/route`)));
+      await assertFails(getDocs(collection(omar(), `shares/${token}/route`)));
+      await assertSucceeds(getDocs(collection(sara(), `shares/${token}/route`)));
+    });
+
+    test('expiring or stopping the share closes its route too', async () => {
+      await open({ expiresAt: earlier() });
+      await seed(`shares/${token}/route/00000`, { chunk: 0, points: [] });
+      await assertFails(getDoc(doc(nobody(), `shares/${token}/route/00000`)));
+      await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), `shares/${token}`)));
+      await assertFails(getDoc(doc(nobody(), `shares/${token}/route/00000`)));
+    });
+
+    test('nobody else writes it, and bad chunks are refused', async () => {
+      await open();
+      await assertFails(setDoc(doc(omar(), `shares/${token}/route/00000`), chunk()));
+      await assertFails(setDoc(doc(nobody(), `shares/${token}/route/00000`), chunk()));
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00000`), chunk({ points: [] })));
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00001`), chunk()));
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00000`), chunk({ points: [{ lat: 95, lng: 46, seg: 0 }] })));
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00000`), chunk({ points: [{ lat: 24, lng: 46, seg: 0, at: 1 }] })));
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00040`), chunk({ chunk: 40 })));
+    });
+
+    test('a shared location has no route', async () => {
+      await open({ kind: 'location', origin: null });
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), `shares/${token}`), { kind: 'location', createdAt: Timestamp.now(), expiresAt: later(30), updatedAt: Timestamp.now(), tracking: 'live', routeChunks: 0, routeVersion: 0 });
+      });
+      await assertFails(setDoc(doc(sara(), `shares/${token}/route/00000`), chunk()));
+    });
+  });
+
+  test('the link opens nothing private', async () => {
+    await open();
+    const paths = [
+      'users/sara',
+      'users/sara/journeys/j1',
+      'users/sara/journeys/j1/route/00000',
+      'users/sara/contacts/c1',
+      'users/sara/devices/d1',
+      'users/sara/safetyChecks/s1',
+      'users/sara/incidents/i1',
+      'users/sara/escalations/e1',
+      'users/sara/contactLinks/l1',
+      'users/sara/receivedAlerts/a1',
+      `users/sara/shares/${token}`,
+      'contactInvites/i1',
+    ];
+    for (const path of paths) {
+      await seed(path, { status: 'planned' });
+      await assertFails(getDoc(doc(nobody(), path)));
+      await assertFails(getDoc(doc(omar(), path)));
+    }
+    await assertFails(getDocs(collection(nobody(), 'users')));
+    await assertFails(getDocs(collection(omar(), 'users/sara/shares')));
+  });
+
+  test('account deletion removes every share, as one write each', async () => {
+    await open();
+    await seed(`shares/${token}/route/00000`, { chunk: 0, points: [] });
+    const db = sara();
+    const mine = await assertSucceeds(getDocs(collection(db, 'users/sara/shares')));
+    assert.equal(mine.size, 1);
+    const chunks = await assertSucceeds(getDocs(collection(db, `shares/${token}/route`)));
+    const batch = writeBatch(db);
+    chunks.forEach((c) => batch.delete(c.ref));
+    batch.delete(doc(db, `shares/${token}`));
+    batch.delete(doc(db, `users/sara/shares/${token}`));
+    await assertSucceeds(batch.commit());
+    await assertFails(getDoc(doc(nobody(), `shares/${token}`)));
+  });
+});
+
+describe('connections between accounts', () => {
+  const token = 'Inv_-0123456789Inv_-0123456789Inv_-01234567';
+  const later = (minutes) => Timestamp.fromDate(new Date(Date.now() + minutes * 60e3));
+  const earlier = () => Timestamp.fromDate(new Date(Date.now() - 60e3));
+  const mona = () => env.authenticatedContext('mona').firestore();
+  const made = Timestamp.fromDate(new Date(Date.now() - 3600e3));
+
+  const newInvite = (extra = {}) => ({
+    inviterUid: 'sara',
+    inviterName: 'Sara Ahmed',
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    expiresAt: later(60 * 72),
+    ...extra,
+  });
+
+  /// Both profiles, and a pending invite of Sara's, as the server would hold it.
+  async function invited(extra = {}) {
+    await seed('users/sara', { fullName: 'Sara Ahmed', updatedAt: Timestamp.now() });
+    await seed('users/omar', { fullName: 'Omar Ali', updatedAt: Timestamp.now() });
+    await seed('users/mona', { fullName: 'Mona Saleh', updatedAt: Timestamp.now() });
+    await seed(`connectionInvites/${token}`, { ...newInvite(), createdAt: made, ...extra });
+  }
+
+  const record = (owner, contact, name, extra = {}) => ({
+    ownerUid: owner,
+    contactUid: contact,
+    contactName: name,
+    status: 'accepted',
+    inviteId: token,
+    createdAt: made,
+    acceptedAt: serverTimestamp(),
+    permissions: { safetyAlerts: false },
+    ...extra,
+  });
+
+  /// As the app accepts: the invite and both sides, in one write.
+  function accept(db, who = 'omar', name = 'Omar Ali', tweak = {}) {
+    const batch = writeBatch(db);
+    batch.update(doc(db, `connectionInvites/${token}`), {
+      status: 'accepted',
+      acceptedBy: who,
+      acceptedAt: serverTimestamp(),
+      ...tweak.invite,
+    });
+    batch.set(doc(db, `users/${who}/connections/sara`), record(who, 'sara', 'Sara Ahmed', tweak.mine));
+    batch.set(doc(db, `users/sara/connections/${who}`), record('sara', who, name, tweak.theirs));
+    return batch.commit();
+  }
+
+  /// A connection that exists, by way of the real write.
+  async function connected() {
+    await invited();
+    await assertSucceeds(accept(omar()));
+  }
+
+  const ended = (who) => ({ status: 'revoked', revokedAt: serverTimestamp(), revokedBy: who });
+
+  describe('inviting', () => {
+    beforeEach(() => seed('users/sara', { fullName: 'Sara Ahmed', updatedAt: Timestamp.now() }));
+
+    test('the owner invites, under their own name', async () => {
+      await assertSucceeds(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite()));
+    });
+
+    test('nobody invites as someone else, or under another name', async () => {
+      await assertFails(setDoc(doc(omar(), `connectionInvites/${token}`), newInvite()));
+      await assertFails(setDoc(doc(nobody(), `connectionInvites/${token}`), newInvite()));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ inviterName: 'Hospital' })));
+    });
+
+    test('a short token, a long life or a forged state is refused', async () => {
+      await assertFails(setDoc(doc(sara(), 'connectionInvites/short'), newInvite()));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ expiresAt: later(60 * 74) })));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ expiresAt: earlier() })));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ status: 'accepted' })));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ createdAt: made })));
+      await assertFails(setDoc(doc(sara(), `connectionInvites/${token}`), newInvite({ email: 'x@y.z' })));
+    });
+  });
+
+  describe('reading an invite', () => {
+    test('a signed-in holder reads an open one; signed out, nobody does', async () => {
+      await invited();
+      await assertSucceeds(getDoc(doc(omar(), `connectionInvites/${token}`)));
+      await assertFails(getDoc(doc(nobody(), `connectionInvites/${token}`)));
+    });
+
+    test('an expired or used one closes to everyone but its two people', async () => {
+      await invited({ expiresAt: earlier() });
+      await assertFails(getDoc(doc(omar(), `connectionInvites/${token}`)));
+      await assertSucceeds(getDoc(doc(sara(), `connectionInvites/${token}`)));
+      await seed(`connectionInvites/${token}`, { ...newInvite(), createdAt: made, status: 'accepted', acceptedBy: 'omar' });
+      await assertSucceeds(getDoc(doc(omar(), `connectionInvites/${token}`)));
+      await assertFails(getDoc(doc(mona(), `connectionInvites/${token}`)));
+    });
+
+    test('nobody lists invites but their own', async () => {
+      await invited();
+      const all = collection(omar(), 'connectionInvites');
+      await assertFails(getDocs(all));
+      await assertFails(getDocs(query(all, where('inviterUid', '==', 'sara'))));
+      await assertFails(getDocs(collection(nobody(), 'connectionInvites')));
+      await assertSucceeds(getDocs(query(collection(sara(), 'connectionInvites'), where('inviterUid', '==', 'sara'))));
+    });
+  });
+
+  describe('accepting', () => {
+    test('one write makes both sides', async () => {
+      await invited();
+      await assertSucceeds(accept(omar()));
+      await assertSucceeds(getDoc(doc(omar(), 'users/omar/connections/sara')));
+      await assertSucceeds(getDoc(doc(sara(), 'users/sara/connections/omar')));
+    });
+
+    test('an invite works once, even for a second person', async () => {
+      await connected();
+      await assertFails(accept(omar()));
+      await assertFails(accept(mona(), 'mona', 'Mona Saleh'));
+    });
+
+    test('two people accepting at once: exactly one gets it', async () => {
+      await invited();
+      const attempt = (db, who, name) => runTransaction(db, async (tx) => {
+        const ref = doc(db, `connectionInvites/${token}`);
+        const invite = await tx.get(ref);
+        if (invite.data().status !== 'pending') throw new Error('used');
+        tx.update(ref, { status: 'accepted', acceptedBy: who, acceptedAt: serverTimestamp() });
+        tx.set(doc(db, `users/${who}/connections/sara`), record(who, 'sara', 'Sara Ahmed'));
+        tx.set(doc(db, `users/sara/connections/${who}`), record('sara', who, name));
+      });
+      const results = await Promise.allSettled([
+        attempt(omar(), 'omar', 'Omar Ali'),
+        attempt(mona(), 'mona', 'Mona Saleh'),
+      ]);
+      assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
+      const connected = await getDocs(collection(sara(), 'users/sara/connections'));
+      assert.equal(connected.size, 1);
+    });
+
+    test('an expired invite cannot be accepted', async () => {
+      await invited({ expiresAt: earlier() });
+      await assertFails(accept(omar()));
+    });
+
+    test('nobody accepts their own', async () => {
+      await invited();
+      await assertFails(accept(sara(), 'sara', 'Sara Ahmed'));
+    });
+
+    test('signed out, nothing is accepted', async () => {
+      await invited();
+      await assertFails(accept(nobody()));
+    });
+
+    test('accepting for someone else is refused', async () => {
+      await invited();
+      await assertFails(accept(mona(), 'omar', 'Omar Ali'));
+    });
+
+    test('a cancelled invite is gone', async () => {
+      await invited();
+      await assertSucceeds(deleteDoc(doc(sara(), `connectionInvites/${token}`)));
+      await assertFails(accept(omar()));
+    });
+
+    test('an invite from a deleted account cannot be accepted', async () => {
+      await invited();
+      await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'users/sara')));
+      await assertFails(accept(omar()));
+    });
+
+    test('it must be all three documents, in one write', async () => {
+      await invited();
+      const db = omar();
+      await assertFails(updateDoc(doc(db, `connectionInvites/${token}`), { status: 'accepted', acceptedBy: 'omar', acceptedAt: serverTimestamp() }));
+      await assertFails(setDoc(doc(db, 'users/omar/connections/sara'), record('omar', 'sara', 'Sara Ahmed')));
+      await assertFails(setDoc(doc(db, 'users/sara/connections/omar'), record('sara', 'omar', 'Omar Ali')));
+      const one = writeBatch(db);
+      one.update(doc(db, `connectionInvites/${token}`), { status: 'accepted', acceptedBy: 'omar', acceptedAt: serverTimestamp() });
+      one.set(doc(db, 'users/omar/connections/sara'), record('omar', 'sara', 'Sara Ahmed'));
+      await assertFails(one.commit());
+    });
+
+    test('nobody connects two other accounts', async () => {
+      await invited();
+      const db = mona();
+      const batch = writeBatch(db);
+      batch.update(doc(db, `connectionInvites/${token}`), { status: 'accepted', acceptedBy: 'mona', acceptedAt: serverTimestamp() });
+      batch.set(doc(db, 'users/omar/connections/sara'), record('omar', 'sara', 'Sara Ahmed'));
+      batch.set(doc(db, 'users/sara/connections/omar'), record('sara', 'omar', 'Omar Ali'));
+      await assertFails(batch.commit());
+    });
+
+    test('a forged name, permission or field is refused', async () => {
+      await invited();
+      await assertFails(accept(omar(), 'omar', 'Your Bank'));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { mine: { contactName: 'Someone Else' } }));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { theirs: { permissions: { safetyAlerts: true } } }));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { mine: { permissions: { location: true, safetyAlerts: false } } }));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { theirs: { location: { lat: 24, lng: 46 } } }));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { theirs: { nickname: 'Boss' } }));
+      await assertFails(accept(omar(), 'omar', 'Omar Ali', { invite: { acceptedBy: 'mona' } }));
+    });
+
+    test('an old invite cannot be replayed to write a record', async () => {
+      await connected();
+      const db = omar();
+      await assertFails(setDoc(doc(db, 'users/mona/connections/omar'), record('mona', 'omar', 'Omar Ali')));
+      await assertFails(setDoc(doc(db, 'users/sara/connections/omar'), record('sara', 'omar', 'Omar Ali')));
+    });
+  });
+
+  describe('a connection', () => {
+    test('only its owner reads it, and nobody lists another account', async () => {
+      await connected();
+      await assertFails(getDoc(doc(omar(), 'users/sara/connections/omar')));
+      await assertFails(getDoc(doc(mona(), 'users/sara/connections/omar')));
+      await assertFails(getDoc(doc(nobody(), 'users/sara/connections/omar')));
+      await assertFails(getDocs(collection(mona(), 'users/sara/connections')));
+      await assertFails(getDocs(collection(omar(), 'users/sara/connections')));
+      await assertFails(getDocs(collection(nobody(), 'users/sara/connections')));
+      await assertSucceeds(getDocs(collection(sara(), 'users/sara/connections')));
+    });
+
+    test('a nickname is the owner\'s alone, and only that can change', async () => {
+      await connected();
+      await assertSucceeds(updateDoc(doc(sara(), 'users/sara/connections/omar'), { nickname: 'Brother' }));
+      await assertFails(updateDoc(doc(omar(), 'users/sara/connections/omar'), { nickname: 'Boss' }));
+      await assertFails(updateDoc(doc(sara(), 'users/sara/connections/omar'), { contactName: 'Someone' }));
+      await assertFails(updateDoc(doc(sara(), 'users/sara/connections/omar'), { permissions: { safetyAlerts: true } }));
+      await assertFails(updateDoc(doc(sara(), 'users/sara/connections/omar'), { nickname: 'x'.repeat(61) }));
+    });
+
+    test('either side ends it; a third account cannot', async () => {
+      await connected();
+      await assertFails(updateDoc(doc(mona(), 'users/sara/connections/omar'), ended('mona')));
+      await assertFails(updateDoc(doc(nobody(), 'users/sara/connections/omar'), ended('omar')));
+      await assertFails(updateDoc(doc(omar(), 'users/sara/connections/omar'), ended('sara')));
+      await assertFails(updateDoc(doc(omar(), 'users/sara/connections/omar'), { ...ended('omar'), revokedAt: Timestamp.now() }));
+      await assertFails(updateDoc(doc(omar(), 'users/sara/connections/omar'), { ...ended('omar'), contactName: 'Someone' }));
+      await assertSucceeds(updateDoc(doc(omar(), 'users/sara/connections/omar'), ended('omar')));
+      await assertSucceeds(updateDoc(doc(omar(), 'users/omar/connections/sara'), ended('omar')));
+    });
+
+    test('ending it removes the ender\'s copy and tells the other side, in one write', async () => {
+      await connected();
+      const db = sara();
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'users/omar/connections/sara'), ended('sara'));
+      batch.delete(doc(db, 'users/sara/connections/omar'));
+      await assertSucceeds(batch.commit());
+    });
+
+    test('a copy cannot be dropped while the other side still thinks it is on', async () => {
+      await connected();
+      await assertFails(deleteDoc(doc(sara(), 'users/sara/connections/omar')));
+      await assertFails(deleteDoc(doc(omar(), 'users/sara/connections/omar')));
+    });
+
+    test('the other account being gone frees this side', async () => {
+      await connected();
+      await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'users/omar/connections/sara')));
+      await assertSucceeds(deleteDoc(doc(sara(), 'users/sara/connections/omar')));
+    });
+
+    test('an ended connection is never switched back on by a plain write', async () => {
+      await connected();
+      await assertSucceeds(updateDoc(doc(omar(), 'users/sara/connections/omar'), ended('omar')));
+      await assertSucceeds(updateDoc(doc(omar(), 'users/omar/connections/sara'), ended('omar')));
+      await assertFails(updateDoc(doc(sara(), 'users/sara/connections/omar'), { status: 'accepted' }));
+      await assertFails(updateDoc(doc(omar(), 'users/omar/connections/sara'), { status: 'accepted' }));
+      await assertFails(setDoc(doc(omar(), 'users/omar/connections/sara'), record('omar', 'sara', 'Sara Ahmed')));
+      await assertFails(updateDoc(doc(sara(), 'users/sara/connections/omar'), { nickname: 'Brother' }));
+    });
+
+    test('a new invite can bring it back, and only that', async () => {
+      await connected();
+      await assertSucceeds(updateDoc(doc(omar(), 'users/sara/connections/omar'), ended('omar')));
+      await assertSucceeds(updateDoc(doc(omar(), 'users/omar/connections/sara'), ended('omar')));
+      await seed(`connectionInvites/${token}`, { ...newInvite(), createdAt: made });
+      await assertSucceeds(accept(omar()));
+    });
+
+    test('connecting twice is refused', async () => {
+      await connected();
+      await seed(`connectionInvites/${token}`, { ...newInvite(), createdAt: made });
+      await assertFails(accept(omar()));
+    });
+  });
+
+  describe('what it does not open', () => {
+    test('a connection reads nothing of the other account', async () => {
+      await connected();
+      const paths = [
+        'users/sara',
+        'users/sara/journeys/j1',
+        'users/sara/journeys/j1/route/00000',
+        'users/sara/journeys/j1/tracking/summary',
+        'users/sara/contacts/c1',
+        'users/sara/devices/d1',
+        'users/sara/shares/s1',
+        'users/sara/safetyChecks/s1',
+        'users/sara/incidents/i1',
+        'users/sara/escalations/e1',
+        'users/sara/contactLinks/l1',
+        'users/sara/receivedAlerts/a1',
+      ];
+      for (const path of paths) {
+        if (path !== 'users/sara') await seed(path, { status: 'active' });
+        await assertFails(getDoc(doc(omar(), path)));
+      }
+      await assertFails(getDocs(collection(omar(), 'users/sara/journeys')));
+      await assertFails(getDocs(collection(omar(), 'users/sara/shares')));
+    });
+
+    test('nor does it open a share, or close one', async () => {
+      await connected();
+      const share = 'Shr_-0123456789Shr_-0123456789Shr_-01234567';
+      const data = { kind: 'location', createdAt: Timestamp.now(), expiresAt: later(30), updatedAt: Timestamp.now(), tracking: 'live', routeChunks: 0, routeVersion: 0 };
+      await seed(`users/sara/shares/${share}`, { kind: 'location', createdAt: Timestamp.now(), expiresAt: later(30) });
+      await seed(`shares/${share}`, data);
+      await assertFails(getDocs(collection(omar(), 'shares')));
+      await assertFails(updateDoc(doc(omar(), `shares/${share}`), { tracking: 'paused', updatedAt: serverTimestamp() }));
+      await assertFails(deleteDoc(doc(omar(), `shares/${share}`)));
+      // Ending the connection changes nothing about the link.
+      await assertSucceeds(updateDoc(doc(omar(), 'users/sara/connections/omar'), ended('omar')));
+      await assertSucceeds(getDoc(doc(nobody(), `shares/${share}`)));
+    });
+
+    test('no rule outside a connection\'s own reads one', () => {
+      const rules = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+      const own = rules.slice(rules.indexOf('match /connections/{contactUid}'), rules.indexOf('// One per install that receives'));
+      const invites = rules.slice(rules.indexOf('match /connectionInvites/{token}'), rules.indexOf('// Everything else'));
+      const rest = rules.replace(own, '').replace(invites, '');
+      assert.doesNotMatch(rest, /connections\//);
+      assert.doesNotMatch(rest, /connectionInvites/);
+    });
+
+    test('the backend-only collections stay closed', async () => {
+      await connected();
+      for (const path of ['users/sara/contactLinks/c1', 'users/omar/receivedAlerts/a1', 'contactInvites/x']) {
+        await assertFails(setDoc(doc(omar(), path), { status: 'accepted' }));
+      }
+    });
+  });
+
+  test('deleting an account ends its connections and its invites', async () => {
+    await connected();
+    await seed('connectionInvites/Old_-0123456789Old_-0123456789Old_-01234567', { ...newInvite(), createdAt: made });
+    const db = sara();
+    const mine = await assertSucceeds(getDocs(query(collection(db, 'connectionInvites'), where('inviterUid', '==', 'sara'))));
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users/omar/connections/sara'), ended('sara'));
+    batch.delete(doc(db, 'users/sara/connections/omar'));
+    mine.forEach((d) => batch.delete(d.ref));
+    await assertSucceeds(batch.commit());
   });
 });
 

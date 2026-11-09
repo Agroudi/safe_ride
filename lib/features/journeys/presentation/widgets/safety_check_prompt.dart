@@ -5,17 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
-import 'package:safe_ride/core/shared_widgets/app_primary_button.dart';
 import 'package:safe_ride/core/theme/app_colors.dart';
 import 'package:safe_ride/features/journeys/data/models/safety_check.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/escalation_status.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/safety_check_answer.dart';
+import 'package:safe_ride/features/journeys/presentation/widgets/safety_check_follow_up.dart';
 
 /// "Are you okay?" over everything: the question, the seconds left and one
 /// large "I'm safe" — nothing to navigate. The seconds are always
 /// `deadline − now` ([now]); the refresh only redraws them. Once the check
 /// timed out it says so plainly — no answer, what became of the alert as far
-/// as is known — and Close.
+/// as is known — then "I'm okay", where to find help, and Close.
 class SafetyCheckPrompt extends StatefulWidget {
   const SafetyCheckPrompt({
     required this.check,
@@ -23,6 +22,8 @@ class SafetyCheckPrompt extends StatefulWidget {
     required this.total,
     required this.confirming,
     required this.onSafe,
+    required this.onOkay,
+    required this.onHelp,
     required this.onClose,
     super.key,
   });
@@ -34,6 +35,10 @@ class SafetyCheckPrompt extends StatefulWidget {
   final Duration total;
   final bool confirming;
   final VoidCallback onSafe;
+
+  /// After the deadline: the user is okay after all, or wants help.
+  final VoidCallback onOkay;
+  final VoidCallback onHelp;
   final VoidCallback onClose;
 
   /// How often the seconds are redrawn.
@@ -110,8 +115,6 @@ class _SafetyCheckPromptState extends State<SafetyCheckPrompt> {
                         ),
                       ),
                       Gap(20.fx),
-                      if (!asking)
-                        EscalationStatus(journeyId: widget.check.journeyId),
                       if (asking)
                         SafetyCheckAnswer(
                           left: widget.check.deadline.difference(widget.now()),
@@ -120,12 +123,12 @@ class _SafetyCheckPromptState extends State<SafetyCheckPrompt> {
                           onSafe: widget.onSafe,
                         )
                       else
-                        AppPrimaryButton(
-                          label: context.tr(
-                            'journeys.safetyCheck.noAnswer.close',
-                          ),
-                          outlined: true,
-                          onPressed: widget.onClose,
+                        SafetyCheckFollowUp(
+                          journeyId: widget.check.journeyId,
+                          busy: widget.confirming,
+                          onOkay: widget.onOkay,
+                          onHelp: widget.onHelp,
+                          onClose: widget.onClose,
                         ),
                     ],
                   ),

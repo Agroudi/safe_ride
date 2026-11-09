@@ -1,8 +1,14 @@
 import 'package:url_launcher/url_launcher.dart';
 
-/// What happened when SafeRide asked the phone to dial. Never "called":
-/// SafeRide only opens the phone app with the number; whether the call is
-/// placed and answered happens outside it, where it cannot see.
+/// What happened when SafeRide asked the phone to dial. Never "called".
+///
+/// Six things happen between a tap on Call and help arriving, and SafeRide
+/// sees only the first two: (1) the number is prepared ([DialNumber]);
+/// (2) the phone app opens with it ready ([opened]). Then, outside SafeRide:
+/// (3) the user presses call — or cancels; (4) the system may log the call,
+/// which SafeRide never reads (no phone-state permission); (5) the call
+/// connects; (6) a service answers and responds. SafeRide can report (1) and
+/// (2) only, and no copy may suggest more.
 enum DialOutcome {
   /// The phone app opened with the number ready; the user presses call.
   opened,
@@ -17,8 +23,22 @@ enum DialOutcome {
   failed,
 }
 
-/// Opens the phone app with a number filled in — the calling service.
-/// `UrlLauncherPhoneDialer` implements it; nothing ever dials by itself.
+/// A number as the phone app should receive it: the spaces, dashes, dots and
+/// brackets people type taken out, then digits only (an optional leading
+/// `+`), 2 to 15 of them. Anything else is never handed over.
+abstract final class DialNumber {
+  static final RegExp _typed = RegExp(r'[\s\-().]');
+
+  /// [raw] ready to dial, or null when it is empty or malformed.
+  static String? prepare(String raw) {
+    final String number = raw.replaceAll(_typed, '');
+    return UrlLauncherPhoneDialer.isDialable(number) ? number : null;
+  }
+}
+
+/// Opens the phone app with a number filled in — the platform end of
+/// calling. `UrlLauncherPhoneDialer` implements it; screens go through
+/// `CallLauncher`, which prepares the number first. Nothing dials by itself.
 abstract interface class PhoneDialer {
   Future<DialOutcome> open(String number);
 }

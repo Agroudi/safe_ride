@@ -46,6 +46,8 @@ class AboutPage extends StatelessWidget {
                   'journeys',
                   'route',
                   'safety',
+                  'mapProviders',
+                  'sharing',
                   'contacts',
                   'preferences',
                 ])
@@ -57,10 +59,7 @@ class AboutPage extends StatelessWidget {
               title: context.tr('about.notYet.title'),
               icon: Icons.remove_circle_outline_rounded,
               color: context.appColors.textMuted,
-              points: <String>[
-                for (final String k in <String>['sharing', 'alerts'])
-                  context.tr('about.notYet.$k'),
-              ],
+              points: <String>[context.tr('about.notYet.alerts')],
             ),
             Gap(14.fx),
             PointList(

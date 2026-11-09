@@ -1,28 +1,42 @@
 {
   "schema": 1,
-  "about": "SafeRide's emergency numbers. Change a number only against an official source, update checkedOn, and keep both languages. emergency_data_source_test rejects an invalid entry. Status: official = an official national source states it; secondary = only a foreign government's travel advice. Unverified numbers are left out.",
+  "about": "SafeRide's emergency numbers. Change a number only against an official source, update checkedOn, and keep both languages. scope: national (default) or regional (a note names the regions; never offered for a service elsewhere). emergency_data_source_test rejects an invalid entry. Status: official = an official national source states it; secondary = only a foreign government's travel advice. Unverified numbers are left out.",
   "countries": [
     {
       "code": "SA",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "note": {
-        "en": "911 answers every emergency in Riyadh, Makkah, Madinah and the Eastern Province. Elsewhere in the Kingdom, call the service's own number.",
-        "ar": "يستقبل ٩١١ كل حالات الطوارئ في الرياض ومكة المكرمة والمدينة المنورة والمنطقة الشرقية. وفي بقية مناطق المملكة، اتصل برقم الخدمة نفسها."
+        "en": "911 answers every emergency, but only in Riyadh, Makkah, Madinah and the Eastern Province. SafeRide can't tell which region you're in. Elsewhere in the Kingdom, call the service's own number below.",
+        "ar": "يستقبل ٩١١ كل حالات الطوارئ، لكن في الرياض ومكة المكرمة والمدينة المنورة والمنطقة الشرقية فقط. لا يستطيع SafeRide معرفة المنطقة التي أنت فيها. وفي بقية مناطق المملكة، اتصل برقم الخدمة نفسها أدناه."
       },
       "services": [
         {
           "types": ["general"],
           "number": "911",
+          "scope": "regional",
           "verification": "official",
-          "sources": ["sa-spa-911", "sa-cst"]
+          "sources": ["sa-cst", "sa-okaz-911"],
+          "note": {
+            "en": "Only in Riyadh, Makkah, Madinah and the Eastern Province.",
+            "ar": "في الرياض ومكة المكرمة والمدينة المنورة والمنطقة الشرقية فقط."
+          }
         },
-        { "types": ["police"], "number": "999", "verification": "official", "sources": ["sa-cst"] },
-        { "types": ["ambulance"], "number": "997", "verification": "official", "sources": ["sa-cst", "sa-spa-997"] },
+        {
+          "types": ["police"],
+          "number": "999",
+          "verification": "official",
+          "sources": ["sa-cst", "sa-okaz-911"],
+          "note": {
+            "en": "The Ministry of Interior gives 999 for the regions outside the four 911 regions; in them, call 911.",
+            "ar": "تخصص وزارة الداخلية الرقم ٩٩٩ للمناطق خارج مناطق ٩١١ الأربع؛ وفيها اتصل بـ ٩١١."
+          }
+        },
+        { "types": ["ambulance"], "number": "997", "verification": "official", "sources": ["sa-cst"] },
         {
           "types": ["fire"],
           "number": "998",
           "verification": "official",
-          "sources": ["sa-cst", "sa-spa-998"],
+          "sources": ["sa-cst", "sa-aawsat-998"],
           "note": {
             "en": "Outside the four 911 regions; in them, Civil Defense asks you to call 911.",
             "ar": "خارج مناطق ٩١١ الأربع؛ وفيها يطلب الدفاع المدني الاتصال بـ ٩١١."
@@ -41,25 +55,20 @@
           "url": "https://www.cst.gov.sa/en/about/Numbering"
         },
         {
-          "id": "sa-spa-911",
-          "publisher": { "en": "Saudi Press Agency, 1 March 2026", "ar": "وكالة الأنباء السعودية، ١ مارس ٢٠٢٦" },
-          "url": "https://www.spa.gov.sa/en/N2525906"
+          "id": "sa-okaz-911",
+          "publisher": { "en": "Okaz, reporting the Ministry of Interior, 6 November 2026", "ar": "صحيفة عكاظ، نقلًا عن وزارة الداخلية، ٦ نوفمبر ٢٠٢٦" },
+          "url": "https://www.okaz.com.sa/local/na/2274180"
         },
         {
-          "id": "sa-spa-998",
-          "publisher": { "en": "Saudi Press Agency (Civil Defense), 18 February 2026", "ar": "وكالة الأنباء السعودية (الدفاع المدني)، ١٨ فبراير ٢٠٢٦" },
-          "url": "https://www.spa.gov.sa/en/N2517952"
-        },
-        {
-          "id": "sa-spa-997",
-          "publisher": { "en": "Saudi Press Agency (Saudi Red Crescent), 7 April 2026", "ar": "وكالة الأنباء السعودية (هيئة الهلال الأحمر)، ٧ أبريل ٢٠٢٦" },
-          "url": "https://spa.gov.sa/en/N2554935"
+          "id": "sa-aawsat-998",
+          "publisher": { "en": "Asharq Al-Awsat, reporting Saudi Civil Defense, 14 September 2026", "ar": "صحيفة الشرق الأوسط، نقلًا عن الدفاع المدني، ١٤ سبتمبر ٢٠٢٦" },
+          "url": "https://english.aawsat.com/node/5318056"
         }
       ]
     },
     {
       "code": "AE",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "note": {
         "en": "These numbers work in every emirate.",
         "ar": "تعمل هذه الأرقام في جميع الإمارات."
@@ -79,7 +88,7 @@
     },
     {
       "code": "KW",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "services": [
         { "types": ["police", "ambulance", "fire"], "number": "112", "verification": "official", "sources": ["kw-moi"] }
       ],
@@ -93,15 +102,15 @@
     },
     {
       "code": "QA",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "services": [
         { "types": ["police", "ambulance", "fire"], "number": "999", "verification": "official", "sources": ["qa-moi", "qa-hmc"] }
       ],
       "sources": [
         {
           "id": "qa-moi",
-          "publisher": { "en": "Qatar Ministry of Interior: emergency contacts", "ar": "وزارة الداخلية القطرية: أرقام الطوارئ" },
-          "url": "https://portal.moi.gov.qa/wps/portal/MOIInternet"
+          "publisher": { "en": "Qatar Ministry of Interior: Emergency Services", "ar": "وزارة الداخلية القطرية: خدمات الطوارئ" },
+          "url": "https://portal.moi.gov.qa/UNCCPCJDoha/English/Emergency_Services.html"
         },
         {
           "id": "qa-hmc",
@@ -112,7 +121,7 @@
     },
     {
       "code": "BH",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "services": [
         { "types": ["police", "ambulance", "fire"], "number": "999", "verification": "official", "sources": ["bh-portal"] },
         { "types": ["traffic"], "number": "199", "verification": "official", "sources": ["bh-portal"] }
@@ -127,7 +136,7 @@
     },
     {
       "code": "OM",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "services": [
         { "types": ["police", "ambulance", "fire"], "number": "9999", "verification": "official", "sources": ["om-rop", "om-portal", "om-cdaa"] }
       ],
@@ -151,7 +160,7 @@
     },
     {
       "code": "EG",
-      "checkedOn": "2026-11-03",
+      "checkedOn": "2026-11-08",
       "services": [
         { "types": ["police"], "number": "122", "verification": "official", "sources": ["eg-moi"] },
         { "types": ["ambulance"], "number": "123", "verification": "official", "sources": ["eg-sis"] },

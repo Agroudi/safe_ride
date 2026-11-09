@@ -21,10 +21,12 @@ abstract interface class SafetyNotifications {
   Future<void> prepare();
 
   /// "Are you okay?", counting down to [check]'s deadline, with "I'm safe".
-  Future<void> asking(SafetyCheck check);
+  /// False when the phone would not show it (notifications off, the channel
+  /// blocked, the deadline passed): asking is not showing.
+  Future<bool> asking(SafetyCheck check);
 
-  /// Replaces it: no answer was recorded.
-  Future<void> noAnswer();
+  /// Replaces it: no answer was recorded for [check]. False as for [asking].
+  Future<bool> noAnswer(SafetyCheck check);
 
   /// Removes whichever is showing.
   Future<void> clear();

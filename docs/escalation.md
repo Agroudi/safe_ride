@@ -1,4 +1,4 @@
-# SafeRide — safety notifications and trusted-contact alerts (Batch 13)
+# SafeRide — safety notifications, trusted-contact alerts, and what follows no answer (Batches 13, 19)
 
 What happens when nobody answers "Are you okay?", how to set it up, and what
 it cannot promise. `CLAUDE.md` §16 holds the decisions;
@@ -255,3 +255,104 @@ future decision.
 Environment: no environment variables. The emulator needs JDK 21 first on
 `PATH` (CLAUDE.md §14). The app's functions region is set in
 `service_locator.dart`, the backend's in `functions/src/index.ts`.
+
+## 11. After no answer (Batch 19)
+
+What the phone does once the 15 seconds have run out, on Spark: nothing is
+sent anywhere, so the app's job is to say that, ask again, and put the ways to
+reach help in the user's own hands.
+
+### The escalation record
+
+There is no new collection or file. The escalation **is** the safety check in
+`escalationReady` (`safety_checks/<uid>.json`, on the phone), id
+`<incidentId>-check`, so one incident can never have two. Batch 19 added:
+
+| Field | Set when |
+|---|---|
+| `incidentType`, `incidentConfidence`, `incidentDetectedAt` | the check is made: a copy of the event, so the record explains itself after the incident file is pruned. No location |
+| `presentedAt` | the follow-up was first on screen (only in the foreground) |
+| `resolvedAt`, `resolution` | closed: `userSafe` (a late "I'm okay") or `journeyEnded` |
+
+`escalationQueuedAt` / `escalationSyncedAt` stay for the backend path (§8);
+`EscalationSync` skips a resolved record.
+
+### The state machine
+
+The stored status keeps Batch 12's machine. The lifecycle the spec names is
+**derived** (`SafetyCheck.stage`, never stored, so it cannot disagree):
+
+```
+incidentDetected ─▶ awaitingUserConfirmation ─▶ confirmedSafe        (final)
+                             │          └─────▶ cancelled            (final)
+                             └─▶ timedOut ─▶ escalationPrepared
+                                                └─▶ awaitingUserAction
+                           escalationPrepared / awaitingUserAction
+                                                └─▶ resolved         (final)
+```
+
+| Stage | Stored as |
+|---|---|
+| incidentDetected | the incident `detected`, no check yet |
+| awaitingUserConfirmation | `pending` |
+| confirmedSafe / cancelled | `confirmedSafe` / `cancelled` |
+| timedOut | `timedOut` (held only inside one queued write) |
+| escalationPrepared | `escalationReady`, never shown |
+| awaitingUserAction | `escalationReady` + `presentedAt` |
+| resolved | `escalationReady` + `resolvedAt` |
+
+Every change goes through `SafetyCheckService`'s one queue and re-reads the
+stored record; `presented` and `resolved` are idempotent (a second call keeps
+the first time). A resolved record never reopens.
+
+### What the user sees
+
+- **The prompt, after the deadline** (`SafetyCheckFollowUp`): "No answer
+  recorded", what became of the alert (`EscalationStatus`: on Spark, nobody was
+  alerted), **I'm okay**, **Get help**, Close. Close leaves it open.
+- **The journey screen** (`JourneyEscalationNote`), while it is open: when no
+  answer was recorded, that nobody was contacted, I'm okay, Get help.
+- **Get help** (`/safety/help`, `SafetyHelpPage`):
+  - the open escalation's time and that it means nothing happened and nobody
+    was contacted, with I'm okay;
+  - the emergency numbers of **the country the user chose** (Batch 10's
+    dataset; none guessed when there is none), each Call opening the phone app
+    with the number ready — the user presses call;
+  - **Share this journey**, only while one is open and only as a link to the
+    existing sharing screen: nothing is shared until the user starts it there;
+  - connected people by name, saying SafeRide can't alert them; saved numbers
+    by name with Call (the number stays in the cubit, never in the state).
+- A late "I'm okay", from any of these, closes the record, marks the incident
+  `dismissed` / `confirmedSafe`, and thanks the user.
+
+### Notifications
+
+- Off screen at the deadline: "Are you okay?" is **replaced** by "No answer
+  recorded" (same id, payload = the check id); tapping it opens the follow-up.
+- Shown only when Android allows it (`access()` first): a refused post returns
+  `false` and the service will try again rather than believe one is showing.
+- Resolving, or the journey ending, removes it. Nothing is shown twice.
+
+### Lifecycle and offline
+
+All of it is local, so it works offline and survives a restart: `recover()`
+(start and every resume) closes records whose journey ended, then presents an
+unseen open one — the one on hand first, so returning through the notification
+marks it seen. A process killed at the deadline is processed on the next
+launch; the follow-up is shown then. Signing out leaves an open record on this
+phone for that account.
+
+### What it never does
+
+Calls anyone, sends anything, shares a location, starts a link, or says
+someone was told. `help_copy_test` reads both translation files for these
+screens (nothing "notified", "delivered", "was alerted", "has been called",
+"on the way", "accident", nor their Arabic; "nobody has been contacted" said),
+and the help screen's tests reach the fake dialer only by a tap.
+
+### Future backend requirements
+
+For contacts to be told, the project needs Blaze and §10; then a resolved
+record should also **retract** an alert already sent (a `resolvedAt` write the
+rules accept, and a second message from `onSafetyCheckUpdated`) — not built,
+and raised in `PRODUCTION_READINESS.md`.

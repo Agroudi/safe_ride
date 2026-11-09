@@ -19,6 +19,8 @@ class JourneyForm extends StatelessWidget {
     required this.onDeparture,
     required this.past,
     this.keptDeparture,
+    this.fromAction,
+    this.toAction,
     super.key,
   });
 
@@ -34,6 +36,10 @@ class JourneyForm extends StatelessWidget {
 
   /// Editing: the stored departure (local), valid even once it has passed.
   final DateTime? keptDeparture;
+
+  /// Under each place's field: choosing it on the map.
+  final Widget? fromAction;
+  final Widget? toAction;
 
   /// The last few distinct places, newest first.
   static List<String> _places(List<JourneyModel> journeys, bool origins) {
@@ -61,6 +67,7 @@ class JourneyForm extends StatelessWidget {
           keyboardType: TextInputType.streetAddress,
           textInputAction: TextInputAction.next,
         ),
+        ?fromAction,
         PlaceChips(
           label: context.tr('journeys.plan.recent'),
           places: _places(past, true),
@@ -75,6 +82,7 @@ class JourneyForm extends StatelessWidget {
           keyboardType: TextInputType.streetAddress,
           textInputAction: TextInputAction.done,
         ),
+        ?toAction,
         PlaceChips(
           label: context.tr('journeys.plan.recent'),
           places: _places(past, false),

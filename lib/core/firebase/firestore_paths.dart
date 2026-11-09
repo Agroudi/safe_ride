@@ -36,6 +36,29 @@ abstract final class FirestorePaths {
   /// Alerts received as someone's trusted contact (the backend's alone).
   static String receivedAlerts(String uid) => '${user(uid)}/receivedAlerts';
 
+  /// This account's shares: the proof each is theirs, and how to find it.
+  static String shareRecords(String uid) => '${user(uid)}/shares';
+
+  /// What a share's link shows. Public to whoever holds the token, so it holds
+  /// no owner.
+  static String share(String token) => 'shares/$token';
+
+  /// A shared journey's route, in chunks.
+  static String shareRoute(String token) => '${share(token)}/route';
+
+  /// Who this account is connected to: one record per side, the id being the
+  /// other account.
+  static String connections(String uid) => '${user(uid)}/connections';
+
+  static String connection(String uid, String contactUid) =>
+      '${connections(uid)}/$contactUid';
+
+  /// Invitations to connect, by token. Top level: the person accepting has no
+  /// way into the inviter's own paths.
+  static const String connectionInvites = 'connectionInvites';
+
+  static String connectionInvite(String token) => '$connectionInvites/$token';
+
   /// One document per install that receives push notifications.
   static String devices(String uid) => '${user(uid)}/devices';
 }

@@ -108,6 +108,8 @@ void main() {
       d
         ..fix(0.5, moved: 13, accuracy: 12, speedError: null)
         ..still(16, accuracy: 12);
+      expect(d.detected(), isEmpty, reason: 'weaker evidence waits longer');
+      d.still(30, accuracy: 12);
       expect(
         d.detected(IncidentType.suddenDeceleration).single.confidence,
         IncidentConfidence.medium,
@@ -120,6 +122,8 @@ void main() {
         ..fix(15, moved: 19)
         ..fix(0.5, moved: 15.5)
         ..still(16);
+      expect(d.detected(), isEmpty, reason: 'weaker evidence waits longer');
+      d.still(30);
       expect(
         d.detected(IncidentType.suddenDeceleration).single.confidence,
         IncidentConfidence.low,

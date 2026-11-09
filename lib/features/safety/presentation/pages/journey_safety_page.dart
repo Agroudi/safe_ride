@@ -47,6 +47,7 @@ class JourneySafetyPage extends StatelessWidget {
                   'review',
                   'checklist',
                   'route',
+                  'share',
                   'check',
                   'status',
                 ])
@@ -58,10 +59,7 @@ class JourneySafetyPage extends StatelessWidget {
               title: context.tr('safety.journeys.cannot.title'),
               icon: Icons.remove_circle_outline_rounded,
               color: context.appColors.textMuted,
-              points: <String>[
-                for (final String k in <String>['sharing', 'alerts'])
-                  context.tr('safety.journeys.cannot.$k'),
-              ],
+              points: <String>[context.tr('safety.journeys.cannot.alerts')],
             ),
             Gap(24.fx),
             AppPrimaryButton(

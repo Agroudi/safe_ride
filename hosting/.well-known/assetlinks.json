@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.saferide.falcon",
+      "sha256_cert_fingerprints": ["40:42:E2:04:87:95:61:C7:DA:6F:FA:FE:7C:9D:8E:5F:F8:2B:B4:E9:1E:45:1D:CF:44:83:84:8E:0F:B6:31:37"]
+    }
+  }
+]

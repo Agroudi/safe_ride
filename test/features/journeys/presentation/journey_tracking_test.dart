@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safe_ride/core/constants/app_asset_loader.dart';
 import 'package:safe_ride/core/constants/app_constants.dart';
 import 'package:safe_ride/core/constants/app_locales.dart';
 import 'package:safe_ride/core/di/service_locator.dart';
@@ -27,6 +28,7 @@ import 'package:safe_ride/features/journeys/data/repository/journey_repository.d
 import 'package:safe_ride/features/journeys/data/repository/journey_tracker.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journey_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/journeys_cubit.dart';
+import 'package:safe_ride/features/journeys/logic/cubit/open_escalation_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/incident_cubit.dart';
 import 'package:safe_ride/features/journeys/logic/cubit/tracking_cubit.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/incident_banner.dart';
@@ -80,6 +82,9 @@ void main() {
       )
       ..registerFactory<JourneyCubit>(() => JourneyCubit(journeys))
       ..registerFactory<TrackingCubit>(() => TrackingCubit(tracker))
+      ..registerFactory<OpenEscalationCubit>(
+        () => OpenEscalationCubit(NoEscalations()),
+      )
       ..registerFactory<IncidentCubit>(
         () => IncidentCubit(incidents, _Session()),
       );
@@ -123,6 +128,7 @@ void main() {
         supportedLocales: AppLocales.supported,
         fallbackLocale: AppLocales.fallback,
         path: AppLocales.translationsPath,
+        assetLoader: const AppAssetLoader(),
         child: BlocProvider<PreferencesCubit>.value(
           value: prefs,
           child: ScreenUtilInit(

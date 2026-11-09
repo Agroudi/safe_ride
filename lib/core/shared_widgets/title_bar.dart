@@ -8,16 +8,24 @@ import 'package:safe_ride/core/shared_widgets/app_back_button.dart';
 /// of register, profile and the journey screens. A tab's root has nothing to go back to: [back]
 /// false leaves the title alone.
 class TitleBar extends StatelessWidget {
-  const TitleBar({required this.title, this.back = true, super.key});
+  const TitleBar({
+    required this.title,
+    this.back = true,
+    this.onBack,
+    super.key,
+  });
 
   final String title;
   final bool back;
+
+  /// Null pops; a screen that can open with nothing beneath it says where to go.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        if (back) ...<Widget>[const AppBackButton(), Gap(12.fx)],
+        if (back) ...<Widget>[AppBackButton(onPressed: onBack), Gap(12.fx)],
         // `Expanded`, not `Flexible`, on the part that absorbs the slack.
         Expanded(
           child: Semantics(

@@ -27,6 +27,12 @@ import 'package:safe_ride/features/safety/logic/states/emergency_state.dart';
 import 'package:safe_ride/features/safety/data/models/trusted_contact_model.dart';
 import 'package:safe_ride/features/safety/data/repository/trusted_contacts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:safe_ride/core/safety/emergency_position.dart';
+import 'package:safe_ride/features/journeys/data/repository/tracker_position_reader.dart';
+import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
+import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
+import 'package:safe_ride/features/safety/data/repository/message_composer.dart';
+import 'package:safe_ride/features/safety/logic/cubit/contact_reach_cubit.dart';
 
 import '../../features/journeys/tracking_fakes.dart';
 import '../../features/safety/invite_fakes.dart';
@@ -57,6 +63,9 @@ void main() {
       safetyChecks: MemorySafetyCheckRepository(),
       safetyNotifications: FakeSafetyNotifications(),
       invites: FakeInvites(),
+      geocoding: FakeGeocoding(),
+      routing: FakeRouting(),
+      mapTiles: FakeMapTiles(),
     );
   });
   tearDown(sl.reset);
@@ -75,6 +84,21 @@ void main() {
     await pumpEventQueue();
     expect(cubit.state, isA<EmergencyReady>());
     expect(sl<PhoneDialer>(), isA<UrlLauncherPhoneDialer>());
+  });
+
+  test('one call launcher for every Call and Message; where the user is comes '
+      'from the one recording', () {
+    expect(identical(sl<CallLauncher>(), sl<CallLauncher>()), isTrue);
+    expect(sl<MessageComposer>(), isA<UrlLauncherMessageComposer>());
+    final ContactReachCubit reach = sl<ContactReachCubit>();
+    addTearDown(reach.close);
+    expect(identical(reach, sl<ContactReachCubit>()), isFalse);
+    expect(sl<EmergencyPositionReader>(), isA<TrackerPositionReader>());
+    final EmergencyLocationCubit a = sl<EmergencyLocationCubit>();
+    final EmergencyLocationCubit b = sl<EmergencyLocationCubit>();
+    addTearDown(a.close);
+    addTearDown(b.close);
+    expect(identical(a, b), isFalse);
   });
 
   test('one safety-check service; a cubit per prompt', () {

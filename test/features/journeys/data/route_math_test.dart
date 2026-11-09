@@ -158,4 +158,92 @@ void main() {
       FixVerdict.accepted,
     );
   });
+
+  group('jumps are measured from when the phone was last seen there', () {
+    final DateTime t0 = DateTime.utc(2026, 11, 8, 9);
+    final TrackPoint home = TrackPoint(
+      lat: 24.7,
+      lng: 46.67,
+      at: t0,
+      accuracy: 5,
+      segment: 0,
+    );
+    LocationFix away(double metres, Duration after) => LocationFix(
+      latitude: 24.7 + metres / 111195,
+      longitude: 46.67,
+      at: t0.add(after),
+      accuracy: 20,
+    );
+
+    test('a kilometre after a minute parked is a jump, not a drive', () {
+      final LocationFix glitch = away(1000, const Duration(seconds: 62));
+      expect(RouteFilter.judge(glitch, home, glitch.at), FixVerdict.accepted);
+      expect(
+        RouteFilter.judge(
+          glitch,
+          home,
+          glitch.at,
+          agreedAt: t0.add(const Duration(seconds: 60)),
+        ),
+        FixVerdict.jump,
+      );
+    });
+
+    test('after a real gap with no fixes, a long way is plausible', () {
+      final LocationFix after = away(2000, const Duration(seconds: 90));
+      expect(
+        RouteFilter.judge(after, home, after.at, agreedAt: t0),
+        FixVerdict.accepted,
+      );
+    });
+
+    test('agrees: later, and no faster than a car', () {
+      final LocationFix a = away(0, const Duration(seconds: 2));
+      expect(
+        RouteFilter.agrees(a, away(40, const Duration(seconds: 4))),
+        isTrue,
+      );
+      expect(
+        RouteFilter.agrees(a, away(400, const Duration(seconds: 4))),
+        isFalse,
+      );
+      expect(
+        RouteFilter.agrees(a, away(10, const Duration(seconds: 2))),
+        isFalse,
+      );
+      expect(RouteFilter.agrees(a, away(10, Duration.zero)), isFalse);
+    });
+  });
+
+  group('the speed shown ignores late, repeated and stale readings', () {
+    final DateTime t0 = DateTime.utc(2026, 11, 8, 9);
+    LocationFix at(Duration after, double speed) => LocationFix(
+      latitude: 24.7,
+      longitude: 46.67,
+      at: t0.add(after),
+      accuracy: 5,
+      speed: speed,
+      speedAccuracy: 0.5,
+    );
+
+    test('only a newer reading moves it', () {
+      final SpeedSmoother s = SpeedSmoother();
+      expect(s.add(at(const Duration(seconds: 2), 10)), 10);
+      expect(
+        s.add(at(const Duration(seconds: 2), 0)),
+        isNull,
+        reason: 'repeat',
+      );
+      expect(s.add(at(const Duration(seconds: 1), 0)), isNull, reason: 'late');
+      expect(s.add(at(const Duration(seconds: 4), 10)), 10);
+    });
+
+    test('a reading too old to be a route point is not shown either', () {
+      final SpeedSmoother s = SpeedSmoother();
+      expect(
+        s.add(at(Duration.zero, 10), now: t0.add(const Duration(seconds: 31))),
+        isNull,
+      );
+    });
+  });
 }

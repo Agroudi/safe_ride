@@ -86,9 +86,7 @@ class FileSafetyCheckRepository implements SafetyCheckRepository {
     return done;
   }
 
-  static bool _finished(SafetyCheck c) =>
-      c.status == SafetyCheckStatus.confirmedSafe ||
-      c.status == SafetyCheckStatus.cancelled;
+  static bool _finished(SafetyCheck c) => c.stage.isFinal;
 
   @override
   Future<void> eraseAccount(String uid) {

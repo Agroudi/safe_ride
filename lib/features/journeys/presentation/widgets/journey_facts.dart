@@ -5,7 +5,7 @@ import 'package:safe_ride/core/extensions/context_extensions.dart';
 import 'package:safe_ride/core/extensions/figma_extensions.dart';
 import 'package:safe_ride/features/journeys/data/models/journey_model.dart';
 import 'package:safe_ride/features/journeys/presentation/widgets/journey_labels.dart';
-import 'package:safe_ride/features/journeys/presentation/widgets/journey_status_chip.dart';
+import 'package:safe_ride/core/shared_widgets/status_chip.dart';
 
 /// Under a journey's places: its departure, its status, when it was
 /// planned, when it started (once it has), and when it last changed (only
@@ -26,7 +26,7 @@ class JourneyFacts extends StatelessWidget {
       children: <Widget>[
         JourneyDeparture(departsAt: journey.departsAt),
         Gap(14.fx),
-        JourneyStatusChip(
+        StatusChip(
           label: JourneyLabels.status(context, journey.status),
           color: JourneyLabels.tone(context.appColors, journey.status),
         ),
