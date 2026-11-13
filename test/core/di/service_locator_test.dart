@@ -33,7 +33,12 @@ import 'package:safe_ride/features/safety/data/repository/call_launcher.dart';
 import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
 import 'package:safe_ride/features/safety/data/repository/message_composer.dart';
 import 'package:safe_ride/features/safety/logic/cubit/contact_reach_cubit.dart';
+import 'package:safe_ride/features/assistant/data/repository/assistant_repository.dart';
+import 'package:safe_ride/features/assistant/data/repository/conversation_store.dart';
+import 'package:safe_ride/features/assistant/data/repository/mock_assistant_repository.dart';
+import 'package:safe_ride/features/assistant/logic/cubit/assistant_cubit.dart';
 
+import '../../features/assistant/assistant_fakes.dart';
 import '../../features/journeys/tracking_fakes.dart';
 import '../../features/safety/invite_fakes.dart';
 
@@ -66,6 +71,7 @@ void main() {
       geocoding: FakeGeocoding(),
       routing: FakeRouting(),
       mapTiles: FakeMapTiles(),
+      conversations: MemoryConversationStore(),
     );
   });
   tearDown(sl.reset);
@@ -96,6 +102,17 @@ void main() {
     expect(sl<EmergencyPositionReader>(), isA<TrackerPositionReader>());
     final EmergencyLocationCubit a = sl<EmergencyLocationCubit>();
     final EmergencyLocationCubit b = sl<EmergencyLocationCubit>();
+    addTearDown(a.close);
+    addTearDown(b.close);
+    expect(identical(a, b), isFalse);
+  });
+
+  test('SafeRide AI: the local mock until a backend exists, the phone store, '
+      'a cubit per screen', () {
+    expect(sl<AssistantRepository>(), isA<MockAssistantRepository>());
+    expect(sl<ConversationStore>(), isA<MemoryConversationStore>());
+    final AssistantCubit a = sl<AssistantCubit>();
+    final AssistantCubit b = sl<AssistantCubit>();
     addTearDown(a.close);
     addTearDown(b.close);
     expect(identical(a, b), isFalse);

@@ -1235,5 +1235,12 @@
         "body": "Check your connection and open the link again."
       }
     }
+  },
+  "assistant": {
+    "mock": {
+      "english": "SafeRide AI preview: answers aren't available yet. This placeholder reply was made on your phone, and nothing was sent.",
+      "arabicMsa": "هذه معاينة SafeRide AI، والإجابات غير متاحة بعد. هذا رد مؤقت أُنشئ على هاتفك، ولم يُرسَل شيء.",
+      "arabicEgyptian": "دي معاينة SafeRide AI، والإجابات لسه مش متاحة. ده رد مؤقت معمول على موبايلك، ومفيش حاجة اتبعتت."
+    }
   }
 }

@@ -22,6 +22,10 @@ import 'package:safe_ride/core/safety/emergency_position.dart';
 import 'package:safe_ride/features/journeys/data/repository/tracker_position_reader.dart';
 import 'package:safe_ride/features/safety/logic/cubit/emergency_location_cubit.dart';
 import 'package:safe_ride/core/session/session_reader.dart';
+import 'package:safe_ride/features/assistant/data/repository/assistant_repository.dart';
+import 'package:safe_ride/features/assistant/data/repository/conversation_store.dart';
+import 'package:safe_ride/features/assistant/data/repository/mock_assistant_repository.dart';
+import 'package:safe_ride/features/assistant/logic/cubit/assistant_cubit.dart';
 import 'package:safe_ride/features/authentication/data/repository/auth_repository.dart';
 import 'package:safe_ride/features/authentication/data/repository/firebase_auth_repository.dart';
 import 'package:safe_ride/features/authentication/logic/cubit/account_cubit.dart';
@@ -134,6 +138,7 @@ Future<void> setupServiceLocator({
   MapTileProvider? mapTiles,
   ShareLinkCheck? shareLinks,
   ConnectionLinkCheck? connectionLinks,
+  ConversationStore? conversations,
 }) async {
   // Awaited here so every preference read after this point is synchronous.
   final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -167,6 +172,7 @@ Future<void> setupServiceLocator({
           sl<FirestoreConnectionRepository>(),
           FirestoreAccountData(sl<FirebaseFirestore>()),
           PreferencesAccountData(sl<AppPreferences>()),
+          sl<ConversationStore>(),
         ],
       ),
     )
@@ -455,6 +461,19 @@ Future<void> setupServiceLocator({
     )
     ..registerFactory<ContactReachCubit>(
       () => ContactReachCubit(sl<CallLauncher>()),
+    )
+    // SafeRide AI. Until its backend exists (AI-04), answers come from the
+    // local, clearly-labelled mock; nothing leaves the phone.
+    ..registerLazySingleton<ConversationStore>(
+      () => conversations ?? FileConversationStore(),
+    )
+    ..registerLazySingleton<AssistantRepository>(MockAssistantRepository.new)
+    ..registerFactory<AssistantCubit>(
+      () => AssistantCubit(
+        sl<SessionReader>(),
+        sl<ConversationStore>(),
+        sl<AssistantRepository>(),
+      ),
     )
     ..registerFactory<EmergencyLocationCubit>(
       () => EmergencyLocationCubit(sl<EmergencyPositionReader>()),

@@ -66,6 +66,9 @@ Then build screens after the signed-in tabs (`AppTabShell`).
   (`docs/emergency.md`). A number the user saved can be called or texted
   from Get help and Trusted Contacts — the phone or messaging app opens and
   the user sends; a connection shares no number (`docs/emergency.md` §10).
+  **SafeRide AI** (in progress, `docs/assistant.md`): an assistant on Gemini's
+  free tier behind a SafeRide backend; today only its app-side models,
+  local mock, on-phone conversation store and cubit exist — no screen yet.
   Login offers a password reset. Accounts are **Firebase Authentication**;
   profiles, journeys and contacts are **Cloud Firestore**, per account, with
   the phone's offline copy (§9, §16).
@@ -380,6 +383,18 @@ lib/
                   summary_line} · place_{pin_button,search_bar,search_results,picker_card,
                   picker_top_bar} · start_sharing_form · manage_sharing · journey_share_card ·
                   share_labels · shared_view_{map,panel}
+    assistant/                             # SafeRide AI (AI-02: no screen yet)
+      data/models/ai_message.dart            # freezed: id, role, text, at — kept on the phone
+      data/models/ai_request.dart            # AiLanguage (+ backend code), AiRequest (id, text,
+                                             #   history, language) — nothing else is ever sent
+      data/models/ai_reply.dart · ai_failure.dart   # AiReply, AiUsage; AiFailureCode (retryable)
+      data/models/assistant_limits.dart      # sizes; historyFor (the recent conversation to send)
+      data/models/emergency_signal.dart      # emergency words, en / MSA / Egyptian, on the phone
+      data/repository/assistant_repository.dart      # interface — the provider-independent seam
+      data/repository/mock_assistant_repository.dart # LOCAL ONLY: preview answers, daily count
+      data/repository/conversation_store.dart        # ConversationStore + FileConversationStore
+      logic/cubit/assistant_cubit.dart       # load, send (one at a time), retry (same id), clear
+      logic/states/assistant_state.dart
     safety/
       data/models/trusted_contact_model.dart # freezed: id, fullName, phone, relationship?, createdAt
       data/models/contact_failure.dart       # the one error the repository throws
@@ -446,6 +461,7 @@ docs/location-sharing.md            # batch 16: design, security, tokens, costs,
 docs/connections.md                 # batch 17: relationships, invites, rules, permissions, limits
 docs/detection.md                   # batch 18: detection, thresholds, confidence, GPS validation, limits
 docs/emergency.md                   # batch 20: numbers and sources, regions, calling, location, limits
+docs/assistant.md                   # AI-01/02: SafeRide AI design, free-tier decision, roadmap
 hosting/                            # the web pages for links (deployed — §16)
   s.html · share.js · share.css · share-config.js
   c.html · invite.js · invite.css   # where an invite lands without the app; reads nothing
@@ -1683,6 +1699,15 @@ long to dial shown as unusable; Get help's Message after a real unanswered
 check. Nothing was sent or dialled. **Not verified:** a real phone, other
 messaging apps, any iOS device.
 
+**AI-01 / AI-02 — SafeRide AI, design and app-side foundation:** the design
+(`docs/assistant.md`): Gemini `gemini-3.5-flash-lite` (fallback
+`gemini-3.1-flash-lite`), **free tier only** by the owner's decision, called
+only from a separate SafeRide backend codebase (`functions-ai/`, not yet
+written), conversations on the phone. AI-02 built the provider-independent
+models, `AssistantLimits`, `EmergencySignal`, the local mock, the on-phone
+store (erased with the account) and `AssistantCubit`, with tests. No screen,
+route, network call or key exists yet.
+
 **Batch 15 — interactive maps:** places picked on a map (search, current
 location, tap, drag), a route preview, and a live map of the journey in
 progress, in both themes and languages. All of it in `docs/maps.md`.
@@ -2095,6 +2120,23 @@ Decisions (change them here when they change):
   and no outcome says sent or delivered. **A connection never exposes a
   number**: connected people are listed by name only, with no Call or
   Message.
+- **SafeRide AI** (AI-01/02; `docs/assistant.md`). Gemini's **free tier only**
+  (the owner's decision): Google may use free-tier questions and answers to
+  improve its products and people may read them, so the AI notice says so,
+  the server strips phone numbers and emails, and the app sends only the
+  question, the recent conversation (`AssistantLimits`) and the language —
+  never location, contacts, journeys, tokens or records. **The app never
+  calls a provider and never holds a key**: `AssistantRepository` is the
+  seam; until the backend exists it is `MockAssistantRepository`, local and
+  labelled as a preview in every answer. The conversation is kept **on the
+  phone only** (`assistant/<uid>.json`, newest 50, erased with the account).
+  One question at a time; a failed one keeps its `requestId` for Retry so it
+  is counted once. Emergency words (`EmergencySignal`, en / MSA / Egyptian)
+  offer Get help on the phone before anything is sent; the assistant has no
+  tools and never states an emergency number. Limits are the server's (20 a
+  day per account); the app's only avoid sending what would be refused.
+  **Open:** the terms' 18+ rule (SafeRide has no age check) and their
+  paid-only rule for EEA / Switzerland / UK users.
 - **Where you are** (batch 20, `EmergencyLocationCard`): the core
   `EmergencyPositionReader`, implemented over `JourneyTracker` — the one GPS
   source. On open only what is known (the recording's newest fix); a new
